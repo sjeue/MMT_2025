@@ -9,7 +9,7 @@
  * 3. Cứ 1 giây, gửi dữ liệu (CPU/RAM giả mạo) cho tất cả client.
  *
  * Biên dịch (trên MSYS2 MINGW64):
- * g++ main.cpp -o server.exe -std=c++11 -lPocoNet -lPocoFoundation -lpthread -lws2_32
+ * g++ main.cpp -o server.exe -std=c++14 -lPocoNet -lPocoUtil -lPocoFoundation -lpthread -lws2_32
  */
 
 #include <Poco/Net/HTTPServer.h>
