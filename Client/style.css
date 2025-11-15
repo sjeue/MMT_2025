@@ -1,3 +1,4 @@
+/* --- PHẦN CHUNG --- */
 body {
     font-family: Arial, sans-serif;
     background-color: #f0f2f5;
@@ -15,22 +16,65 @@ body {
     padding: 30px 40px;
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    min-width: 350px;
+    box-sizing: border-box; /* Đảm bảo padding không làm vỡ layout */
 }
 
 h1 {
     color: #1a1a1a;
     margin-top: 0;
+    margin-bottom: 25px;
 }
 
+hr {
+    border: none;
+    height: 1px;
+    background-color: #e0e0e0;
+    margin: 30px 0;
+}
+
+/* --- LỚP TIỆN ÍCH --- */
+.hidden {
+    display: none; /* Class này dùng để ẩn/hiện giao diện */
+}
+
+/* --- PHẦN CÀI ĐẶT KẾT NỐI --- */
+.connection-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.input-group label {
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+}
+
+.input-group input {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1em;
+}
+
+/* --- TRẠNG THÁI KẾT NỐI (dùng chung) --- */
 .status-box {
-    margin-bottom: 25px;
+    margin-top: 25px;
     font-size: 1.1em;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-#status-light {
+#login-status-light, /* Đổi tên ID */
+#control-status-light { /* Đổi tên ID */
     width: 15px;
     height: 15px;
     border-radius: 50%;
@@ -46,26 +90,49 @@ h1 {
     background-color: #4bceb0; /* Xanh */
 }
 
-.card-container {
-    display: flex;
-    gap: 20px;
-}
-
-.card {
-    background-color: #f9f9f9;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 20px 40px;
-    min-width: 150px;
-}
-
-.card h2 {
-    margin: 0 0 10px 0;
-    color: #555;
-}
-
-.data-display {
-    font-size: 2.5em;
+/* --- PHẦN NÚT BẤM --- */
+button {
+    padding: 12px 20px;
+    font-size: 1em;
     font-weight: bold;
-    color: #007bff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    color: white;
+    width: 100%;
+}
+
+#btn-connect {
+    background-color: #007bff; /* Xanh dương */
+    margin-top: 10px; /* Thêm khoảng cách */
+}
+
+#btn-connect:hover {
+    background-color: #0056b3;
+}
+
+.controls {
+    margin-top: 20px;
+}
+
+#btn-shutdown {
+    background-color: #e74c3c; /* Đỏ (màu khác) */
+}
+
+#btn-shutdown:hover {
+    background-color: #c0392b;
+}
+
+#btn-disconnect {
+    background-color: #7f8c8d; /* Xám */
+}
+
+#btn-disconnect:hover {
+    background-color: #606f70;
+}
+
+button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
 }
