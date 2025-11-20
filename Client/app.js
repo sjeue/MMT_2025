@@ -2,7 +2,6 @@
 let socket = null;
 
 // --- Lấy các phần tử DOM ---
-// Giao diện
 const loginView = document.getElementById("login-view");
 const controlView = document.getElementById("control-view");
 
@@ -16,44 +15,69 @@ const loginStatusLight = document.getElementById("login-status-light");
 // Giao diện Điều khiển
 const controlStatusText = document.getElementById("control-status-text");
 const controlStatusLight = document.getElementById("control-status-light");
-const shutdownButton = document.getElementById("btn-shutdown");
 const disconnectButton = document.getElementById("btn-disconnect");
 
+// Nút bấm Process
+const btnListProcess = document.getElementById("btn-list-process");
+const btnStartProcess = document.getElementById("btn-start-process");
+const btnStopProcess = document.getElementById("btn-stop-process");
+const processNameInput = document.getElementById("process-name-start");
+const processPidInput = document.getElementById("process-pid-stop");
 
+// Nút bấm Screen
+const btnScreenCapture = document.getElementById("btn-screen-capture");
+const btnScreenRecord = document.getElementById("btn-screen-record");
+const recordDurationInput = document.getElementById("record-duration");
+
+// Nút bấm Message
+const btnSendMessage = document.getElementById("btn-send-message");
+const messageInput = document.getElementById("message-text");
+
+// Nút bấm System
+const btnShutdown = document.getElementById("btn-shutdown");
+
+
+// --- HÀM TRỢ GIÚP GỬI LỆNH JSON ---
 /**
- * Hàm cập nhật UI để CHUYỂN SANG GIAO DIỆN ĐIỀU KHIỂN
+ * Gửi một lệnh có cấu trúc JSON đến server.
+ * @param {string} command - Tên lệnh (vd: "shutdown", "list_process")
+ * @param {object|null} payload - Dữ liệu đi kèm (vd: { name: "notepad.exe" })
  */
-function showControlView() {
-    loginView.classList.add("hidden"); // Ẩn Login
-    controlView.classList.remove("hidden"); // Hiện Điều khiển
+function sendSocketMessage(command, payload = null) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        const message = JSON.stringify({
+            command: command,
+            payload: payload
+        });
+        
+        socket.send(message);
+        console.log(`Đã gửi: ${message}`);
+    } else {
+        alert("Lỗi: Mất kết nối tới server!");
+        showLoginView("Đã mất kết nối", true); // Quay về màn hình login
+    }
+}
 
-    // Cập nhật trạng thái trên màn hình điều khiển
+
+// --- HÀM QUẢN LÝ GIAO DIỆN (Giữ nguyên) ---
+function showControlView() {
+    loginView.classList.add("hidden");
+    controlView.classList.remove("hidden");
     controlStatusText.innerText = "Đã kết nối";
     controlStatusLight.className = "connected";
 }
 
-/**
- * Hàm cập nhật UI để QUAY LẠI GIAO DIỆN LOGIN
- * (Dùng khi ngắt kết nối hoặc kết nối lỗi)
- */
 function showLoginView(message, isError = false) {
-    loginView.classList.remove("hidden"); // Hiện Login
-    controlView.classList.add("hidden"); // Ẩn Điều khiển
-
-    // Cập nhật trạng thái trên màn hình login
+    loginView.classList.remove("hidden");
+    controlView.classList.add("hidden");
     loginStatusText.innerText = message;
     loginStatusLight.className = isError ? "disconnected" : "disconnected";
-
-    // Kích hoạt lại nút kết nối
     connectButton.disabled = false;
     connectButton.innerText = "Kết nối";
 }
 
-/**
- * Hàm khởi tạo kết nối WebSocket
- */
+// --- HÀM KẾT NỐI (Gần như giữ nguyên) ---
 function connect() {
-    // Lấy IP và Port từ ô nhập liệu
     const ip = ipInput.value;
     const port = portInput.value;
     if (!ip || !port) {
@@ -63,61 +87,108 @@ function connect() {
     const serverUrl = `ws://${ip}:${port}`;
     console.log(`Đang thử kết nối tới: ${serverUrl}`);
 
-    // Cập nhật UI (trên màn hình Login)
     connectButton.disabled = true;
     connectButton.innerText = "Đang kết nối...";
     loginStatusText.innerText = "Đang kết nối...";
     loginStatusLight.className = "disconnected";
 
-    // Tạo đối tượng WebSocket mới
     socket = new WebSocket(serverUrl);
 
-    // Xử lý khi kết nối được mở thành công
     socket.onopen = function(event) {
         console.log("Đã kết nối tới server.");
-        showControlView(); // <-- Chuyển giao diện
+        showControlView();
     };
 
-    // Xử lý khi kết nối bị đóng
     socket.onclose = function(event) {
         console.log("Kết nối đã bị đóng.");
-        showLoginView("Đã ngắt kết nối"); // <-- Quay lại Login
+        showLoginView("Đã ngắt kết nối");
         socket = null;
     };
 
-    // Xử lý khi có lỗi kết nối
     socket.onerror = function(error) {
         console.error("Lỗi WebSocket:", error);
-        showLoginView("Lỗi kết nối", true); // <-- Quay lại Login
+        showLoginView("Lỗi kết nối", true);
         socket = null;
     };
+
+    // CHÚ Ý: Bạn có thể thêm logic `socket.onmessage` ở đây
+    // để nhận phản hồi từ server (vd: danh sách process)
+    // và hiển thị lên UI.
 }
 
-// --- Gắn sự kiện cho các nút ---
+// --- GẮN SỰ KIỆN CHO CÁC NÚT ĐIỀU KHIỂN ---
 
-// 1. Nút "Kết nối" trên màn hình Login
+// Nút kết nối
 connectButton.addEventListener("click", function() {
-    // Chỉ chạy hàm connect nếu chưa kết nối
     if (!socket || socket.readyState === WebSocket.CLOSED) {
         connect();
     }
 });
 
-// 2. Nút "Ngắt kết nối" trên màn hình Điều khiển
+// Nút ngắt kết nối
 disconnectButton.addEventListener("click", function() {
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.close();
     }
 });
 
-// 3. Nút "Gửi lệnh Shutdown" trên màn hình Điều khiển
-shutdownButton.addEventListener("click", function() {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-        const message = "shutdown";
-        socket.send(message);
-        console.log(`Đã gửi tin nhắn: ${message}`);
-        alert("Đã gửi lệnh 'shutdown'!");
+// --- Nhóm Process ---
+btnListProcess.addEventListener("click", function() {
+    // Về "Start/Stop Apps" / "List running Apps":
+    // Trong thực tế, "App" và "Process" là gần như tương đồng.
+    // Tôi gộp chúng lại thành "Process" cho rõ ràng.
+    sendSocketMessage("list_processes");
+});
+
+btnStartProcess.addEventListener("click", function() {
+    const processName = processNameInput.value;
+    if (processName) {
+        sendSocketMessage("start_process", { name: processName });
+        processNameInput.value = ""; // Xóa input
     } else {
-        alert("Không thể gửi tin nhắn. Đã mất kết nối tới server.");
+        alert("Vui lòng nhập tên process (ví dụ: notepad.exe)");
+    }
+});
+
+btnStopProcess.addEventListener("click", function() {
+    const processId = processPidInput.value;
+    if (processId) {
+        sendSocketMessage("stop_process", { id: processId });
+        processPidInput.value = ""; // Xóa input
+    } else {
+        alert("Vui lòng nhập PID hoặc Tên process để dừng.");
+    }
+});
+
+// --- Nhóm Screen ---
+btnScreenCapture.addEventListener("click", function() {
+    sendSocketMessage("screen_capture");
+});
+
+btnScreenRecord.addEventListener("click", function() {
+    const duration = parseInt(recordDurationInput.value, 10);
+    if (duration > 0) {
+        sendSocketMessage("screen_record", { duration: duration });
+    } else {
+        alert("Thời gian quay phải lớn hơn 0 giây.");
+    }
+});
+
+// --- Nhóm Message ---
+btnSendMessage.addEventListener("click", function() {
+    const messageText = messageInput.value;
+    if (messageText) {
+        sendSocketMessage("send_message", { text: messageText });
+        messageInput.value = ""; // Xóa input
+    } else {
+        alert("Vui lòng nhập tin nhắn.");
+    }
+});
+
+// --- Nhóm System ---
+btnShutdown.addEventListener("click", function() {
+    // Thêm một bước xác nhận cho hành động nguy hiểm
+    if (confirm("Bạn có CHẮC CHẮN muốn shutdown server không?")) {
+        sendSocketMessage("shutdown");
     }
 });

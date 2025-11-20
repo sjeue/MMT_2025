@@ -16,8 +16,8 @@ body {
     padding: 30px 40px;
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    min-width: 350px;
-    box-sizing: border-box; /* Đảm bảo padding không làm vỡ layout */
+    min-width: 400px; /* Tăng chiều rộng 1 chút */
+    box-sizing: border-box;
 }
 
 h1 {
@@ -30,15 +30,15 @@ hr {
     border: none;
     height: 1px;
     background-color: #e0e0e0;
-    margin: 30px 0;
+    margin: 25px 0;
 }
 
 /* --- LỚP TIỆN ÍCH --- */
 .hidden {
-    display: none; /* Class này dùng để ẩn/hiện giao diện */
+    display: none;
 }
 
-/* --- PHẦN CÀI ĐẶT KẾT NỐI --- */
+/* --- PHẦN LOGIN --- */
 .connection-settings {
     display: flex;
     flex-direction: column;
@@ -57,14 +57,7 @@ hr {
     color: #555;
 }
 
-.input-group input {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 1em;
-}
-
-/* --- TRẠNG THÁI KẾT NỐI (dùng chung) --- */
+/* --- TRẠNG THÁI (dùng chung) --- */
 .status-box {
     margin-top: 25px;
     font-size: 1.1em;
@@ -73,8 +66,8 @@ hr {
     justify-content: center;
 }
 
-#login-status-light, /* Đổi tên ID */
-#control-status-light { /* Đổi tên ID */
+#login-status-light,
+#control-status-light {
     width: 15px;
     height: 15px;
     border-radius: 50%;
@@ -83,14 +76,14 @@ hr {
 }
 
 .disconnected {
-    background-color: #eb4d4b; /* Đỏ */
+    background-color: #eb4d4b;
 }
 
 .connected {
-    background-color: #4bceb0; /* Xanh */
+    background-color: #4bceb0;
 }
 
-/* --- PHẦN NÚT BẤM --- */
+/* --- PHẦN NÚT BẤM (chung) --- */
 button {
     padding: 12px 20px;
     font-size: 1em;
@@ -101,38 +94,89 @@ button {
     transition: background-color 0.2s ease;
     color: white;
     width: 100%;
-}
-
-#btn-connect {
-    background-color: #007bff; /* Xanh dương */
-    margin-top: 10px; /* Thêm khoảng cách */
-}
-
-#btn-connect:hover {
-    background-color: #0056b3;
-}
-
-.controls {
-    margin-top: 20px;
-}
-
-#btn-shutdown {
-    background-color: #e74c3c; /* Đỏ (màu khác) */
-}
-
-#btn-shutdown:hover {
-    background-color: #c0392b;
-}
-
-#btn-disconnect {
-    background-color: #7f8c8d; /* Xám */
-}
-
-#btn-disconnect:hover {
-    background-color: #606f70;
+    box-sizing: border-box;
 }
 
 button:disabled {
     background-color: #ccc;
     cursor: not-allowed;
+}
+
+#btn-connect {
+    background-color: #007bff;
+    margin-top: 10px;
+}
+#btn-connect:hover {
+    background-color: #0056b3;
+}
+
+/* --- PHẦN MỚI: GIAO DIỆN ĐIỀU KHIỂN --- */
+
+/* Nhóm điều khiển */
+.control-group {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 20px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Khoảng cách giữa các mục trong nhóm */
+}
+
+.control-group legend {
+    font-weight: bold;
+    color: #0056b3;
+    padding: 0 5px;
+}
+
+/* Layout cho Input + Nút bấm */
+.input-with-button {
+    display: flex;
+    gap: 10px;
+}
+
+.input-with-button input {
+    flex-grow: 1; /* Input chiếm phần lớn không gian */
+    min-width: 100px;
+}
+
+.input-with-button button {
+    flex-shrink: 0; /* Nút không bị co lại */
+    width: auto; /* Để nút tự co theo nội dung */
+    background-color: #5cb85c; /* Xanh lá */
+}
+.input-with-button button:hover {
+    background-color: #4cae4c;
+}
+
+/* Style cho input chung (trong control-view) */
+#control-view input {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1em;
+}
+
+/* Nút đặc biệt */
+.btn-danger {
+    background-color: #e74c3c;
+}
+.btn-danger:hover {
+    background-color: #c0392b;
+}
+
+.btn-neutral {
+    background-color: #7f8c8d;
+}
+.btn-neutral:hover {
+    background-color: #606f70;
+}
+
+/* Nút 100% trong group */
+.control-group > button {
+    background-color: #007bff;
+}
+.control-group > button:hover {
+    background-color: #0056b3;
 }
