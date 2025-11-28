@@ -1,182 +1,129 @@
-/* --- PHẦN CHUNG --- */
+/* --- CẤU HÌNH CHUNG --- */
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #f0f2f5;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    min-height: 100vh;
     margin: 0;
     color: #333;
 }
 
+/* --- DASHBOARD CONTAINER --- */
 .dashboard {
     text-align: center;
     background-color: #ffffff;
-    padding: 30px 40px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    min-width: 400px; /* Tăng chiều rộng 1 chút */
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    width: 90%;
+    max-width: 400px; /* Mặc định cho màn hình Login */
+    transition: all 0.3s ease;
     box-sizing: border-box;
 }
 
-h1 {
-    color: #1a1a1a;
-    margin-top: 0;
-    margin-bottom: 25px;
+/* Class mở rộng chiều rộng khi vào bảng điều khiển */
+.wide-dashboard {
+    max-width: 1000px;
 }
 
-hr {
-    border: none;
-    height: 1px;
-    background-color: #e0e0e0;
-    margin: 25px 0;
-}
+h1 { margin-top: 0; color: #2c3e50; }
+hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
+.hidden { display: none !important; }
 
-/* --- LỚP TIỆN ÍCH --- */
-.hidden {
-    display: none;
-}
+/* --- LOGIN FORM --- */
+.connection-settings { display: flex; flex-direction: column; gap: 15px; }
+.input-group { display: flex; flex-direction: column; text-align: left; }
+.input-group label { margin-bottom: 5px; font-weight: 600; color: #555; }
+.input-group input { padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
 
-/* --- PHẦN LOGIN --- */
-.connection-settings {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.input-group {
-    display: flex;
-    flex-direction: column;
+/* --- GRID LAYOUT (2 CỘT) --- */
+.control-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
     text-align: left;
+    margin-top: 20px;
+}
+/* Responsive: Về 1 cột trên màn hình nhỏ */
+@media (max-width: 768px) {
+    .control-layout { grid-template-columns: 1fr; }
 }
 
-.input-group label {
-    margin-bottom: 5px;
-    font-weight: bold;
-    color: #555;
-}
-
-/* --- TRẠNG THÁI (dùng chung) --- */
-.status-box {
-    margin-top: 25px;
-    font-size: 1.1em;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-#login-status-light,
-#control-status-light {
-    width: 15px;
-    height: 15px;
-    border-radius: 50%;
-    margin-right: 10px;
-    display: inline-block;
-}
-
-.disconnected {
-    background-color: #eb4d4b;
-}
-
-.connected {
-    background-color: #4bceb0;
-}
-
-/* --- PHẦN NÚT BẤM (chung) --- */
-button {
-    padding: 12px 20px;
-    font-size: 1em;
-    font-weight: bold;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-    color: white;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-button:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-}
-
-#btn-connect {
-    background-color: #007bff;
-    margin-top: 10px;
-}
-#btn-connect:hover {
-    background-color: #0056b3;
-}
-
-/* --- PHẦN MỚI: GIAO DIỆN ĐIỀU KHIỂN --- */
-
-/* Nhóm điều khiển */
+/* --- CONTROL GROUPS --- */
 .control-group {
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     padding: 15px;
-    margin-top: 20px;
-    text-align: left;
     display: flex;
     flex-direction: column;
-    gap: 12px; /* Khoảng cách giữa các mục trong nhóm */
-}
-
-.control-group legend {
-    font-weight: bold;
-    color: #0056b3;
-    padding: 0 5px;
-}
-
-/* Layout cho Input + Nút bấm */
-.input-with-button {
-    display: flex;
     gap: 10px;
+    background-color: #fafafa;
 }
+.control-group legend { font-weight: bold; color: #007bff; padding: 0 8px; }
 
-.input-with-button input {
-    flex-grow: 1; /* Input chiếm phần lớn không gian */
-    min-width: 100px;
+/* --- INPUTS & BUTTONS --- */
+button {
+    padding: 10px 15px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    color: white;
+    transition: background 0.2s;
+    width: 100%;
 }
+.input-with-button { display: flex; gap: 8px; }
+.input-with-button input { flex-grow: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+.input-with-button button { width: auto; white-space: nowrap; }
 
-.input-with-button button {
-    flex-shrink: 0; /* Nút không bị co lại */
-    width: auto; /* Để nút tự co theo nội dung */
-    background-color: #5cb85c; /* Xanh lá */
-}
-.input-with-button button:hover {
-    background-color: #4cae4c;
-}
+/* Màu sắc nút bấm */
+#btn-connect, .control-group button { background-color: #007bff; } /* Xanh dương */
+#btn-connect:hover, .control-group button:hover { background-color: #0056b3; }
 
-/* Style cho input chung (trong control-view) */
-#control-view input {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 1em;
-}
+.btn-warning { background-color: #f39c12 !important; } /* Cam */
+.btn-warning:hover { background-color: #d68910 !important; }
 
-/* Nút đặc biệt */
-.btn-danger {
-    background-color: #e74c3c;
-}
-.btn-danger:hover {
-    background-color: #c0392b;
-}
+.btn-danger { background-color: #e74c3c !important; } /* Đỏ */
+.btn-danger:hover { background-color: #c0392b !important; }
 
-.btn-neutral {
-    background-color: #7f8c8d;
-}
-.btn-neutral:hover {
-    background-color: #606f70;
-}
+.btn-neutral { background-color: #95a5a6 !important; } /* Xám */
+.btn-neutral:hover { background-color: #7f8c8d !important; }
 
-/* Nút 100% trong group */
-.control-group > button {
-    background-color: #007bff;
+.btn-download {
+    display: inline-block; padding: 10px 20px; background-color: #27ae60; 
+    color: white; text-decoration: none; border-radius: 5px; font-weight: bold;
 }
-.control-group > button:hover {
-    background-color: #0056b3;
+.btn-download:hover { background-color: #2ecc71; }
+
+/* --- STATUS INDICATOR --- */
+.status-box { margin-top: 20px; display: flex; align-items: center; justify-content: center; }
+#login-status-light, #control-status-light { width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+.disconnected { background-color: #e74c3c; }
+.connected { background-color: #2ecc71; }
+
+/* --- MODAL (POPUP) --- */
+.modal {
+    position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center;
 }
+.modal-content {
+    background-color: #fff; padding: 25px; border-radius: 10px; width: 85%; max-width: 900px;
+    max-height: 90vh; overflow-y: auto; position: relative; text-align: left;
+}
+.close-btn { position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; color: #aaa; cursor: pointer; }
+.close-btn:hover { color: #333; }
+#modal-body { margin-top: 15px; overflow-x: auto; }
+#modal-footer { margin-top: 20px; text-align: right; border-top: 1px solid #eee; padding-top: 15px; }
+
+/* --- TABLE STYLES --- */
+.result-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.result-table th, .result-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+.result-table th { background-color: #f8f9fa; color: #333; }
+.result-table tr:nth-child(even) { background-color: #f9f9f9; }
+
+/* --- IMAGE & VIDEO --- */
+.screenshot-img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; display: block; margin: 0 auto; }
+video { max-width: 100%; display: block; margin: 0 auto; border-radius: 4px; }

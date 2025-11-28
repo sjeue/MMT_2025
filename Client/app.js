@@ -1,65 +1,36 @@
-// --- Biến toàn cục để giữ kết nối ---
+// ==========================================
+// 1. KHỞI TẠO BIẾN VÀ LẤY DOM ELEMENTS
+// ==========================================
 let socket = null;
 
-// --- Lấy các phần tử DOM ---
+// Views
 const loginView = document.getElementById("login-view");
 const controlView = document.getElementById("control-view");
 
-// Giao diện Login
+// Inputs kết nối
 const ipInput = document.getElementById("server-ip");
 const portInput = document.getElementById("server-port");
 const connectButton = document.getElementById("btn-connect");
-const loginStatusText = document.getElementById("login-status-text");
-const loginStatusLight = document.getElementById("login-status-light");
-
-// Giao diện Điều khiển
-const controlStatusText = document.getElementById("control-status-text");
-const controlStatusLight = document.getElementById("control-status-light");
 const disconnectButton = document.getElementById("btn-disconnect");
 
-// Nút bấm Process
-const btnListProcess = document.getElementById("btn-list-process");
-const btnStartProcess = document.getElementById("btn-start-process");
-const btnStopProcess = document.getElementById("btn-stop-process");
-const processNameInput = document.getElementById("process-name-start");
-const processPidInput = document.getElementById("process-pid-stop");
+// Status indicators
+const loginStatusText = document.getElementById("login-status-text");
+const loginStatusLight = document.getElementById("login-status-light");
+const controlStatusText = document.getElementById("control-status-text");
+const controlStatusLight = document.getElementById("control-status-light");
 
-// Nút bấm Screen
-const btnScreenCapture = document.getElementById("btn-screen-capture");
-const btnScreenRecord = document.getElementById("btn-screen-record");
-const recordDurationInput = document.getElementById("record-duration");
+// Modal Elements
+const resultModal = document.getElementById("result-modal");
+const modalTitle = document.getElementById("modal-title");
+const modalBody = document.getElementById("modal-body");
+const closeModal = document.getElementById("close-modal");
+const modalFooter = document.getElementById("modal-footer");
+const downloadLink = document.getElementById("download-link");
 
-// Nút bấm Message
-const btnSendMessage = document.getElementById("btn-send-message");
-const messageInput = document.getElementById("message-text");
+// ==========================================
+// 2. HÀM XỬ LÝ GIAO DIỆN (UI)
+// ==========================================
 
-// Nút bấm System
-const btnShutdown = document.getElementById("btn-shutdown");
-
-
-// --- HÀM TRỢ GIÚP GỬI LỆNH JSON ---
-/**
- * Gửi một lệnh có cấu trúc JSON đến server.
- * @param {string} command - Tên lệnh (vd: "shutdown", "list_process")
- * @param {object|null} payload - Dữ liệu đi kèm (vd: { name: "notepad.exe" })
- */
-function sendSocketMessage(command, payload = null) {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-        const message = JSON.stringify({
-            command: command,
-            payload: payload
-        });
-        
-        socket.send(message);
-        console.log(`Đã gửi: ${message}`);
-    } else {
-        alert("Lỗi: Mất kết nối tới server!");
-        showLoginView("Đã mất kết nối", true); // Quay về màn hình login
-    }
-}
-
-
-// --- HÀM QUẢN LÝ GIAO DIỆN (Giữ nguyên) ---
 function showControlView() {
     loginView.classList.add("hidden");
     controlView.classList.remove("hidden");
@@ -70,125 +41,237 @@ function showControlView() {
 function showLoginView(message, isError = false) {
     loginView.classList.remove("hidden");
     controlView.classList.add("hidden");
+    resultModal.classList.add("hidden"); // Đóng modal nếu đang mở
+    
     loginStatusText.innerText = message;
-    loginStatusLight.className = isError ? "disconnected" : "disconnected";
+    loginStatusLight.className = "disconnected";
+    
     connectButton.disabled = false;
     connectButton.innerText = "Kết nối";
 }
 
-// --- HÀM KẾT NỐI (Gần như giữ nguyên) ---
+// Xử lý đóng Modal
+closeModal.onclick = () => { resultModal.classList.add("hidden"); };
+window.onclick = (event) => {
+    if (event.target == resultModal) resultModal.classList.add("hidden");
+};
+
+// ==========================================
+// 3. HÀM KẾT NỐI WEBSOCKET
+// ==========================================
+
 function connect() {
     const ip = ipInput.value;
     const port = portInput.value;
-    if (!ip || !port) {
-        alert("Vui lòng nhập cả IP và Port.");
-        return;
-    }
-    const serverUrl = `ws://${ip}:${port}`;
-    console.log(`Đang thử kết nối tới: ${serverUrl}`);
 
+    if (!ip || !port) return alert("Vui lòng nhập IP và Port server.");
+
+    // Update UI trạng thái
     connectButton.disabled = true;
     connectButton.innerText = "Đang kết nối...";
-    loginStatusText.innerText = "Đang kết nối...";
-    loginStatusLight.className = "disconnected";
+    loginStatusText.innerText = "Đang thử kết nối...";
 
+    // Tạo kết nối WebSocket
+    // Lưu ý: "ws://" cho WebSocket thường
+    const serverUrl = `ws://${ip}:${port}`;
+    console.log(`Connecting to: ${serverUrl}`);
+    
     socket = new WebSocket(serverUrl);
 
-    socket.onopen = function(event) {
-        console.log("Đã kết nối tới server.");
+    // --- SỰ KIỆN SOCKET ---
+
+    socket.onopen = function() {
+        console.log("WebSocket Connected");
         showControlView();
     };
 
-    socket.onclose = function(event) {
-        console.log("Kết nối đã bị đóng.");
+    socket.onclose = function() {
+        console.log("WebSocket Closed");
         showLoginView("Đã ngắt kết nối");
         socket = null;
     };
 
     socket.onerror = function(error) {
-        console.error("Lỗi WebSocket:", error);
+        console.error("WebSocket Error", error);
         showLoginView("Lỗi kết nối", true);
         socket = null;
     };
 
-    // CHÚ Ý: Bạn có thể thêm logic `socket.onmessage` ở đây
-    // để nhận phản hồi từ server (vd: danh sách process)
-    // và hiển thị lên UI.
+    socket.onmessage = function(event) {
+        // Nhận dữ liệu từ server
+        console.log(`[RECEIVED]: ${event.data}`);
+        try {
+            const data = JSON.parse(event.data);
+            handleServerResponse(data);
+        } catch (e) {
+            console.error("Non-JSON received:", event.data);
+            showModal("Thông báo từ Server", `<p>${event.data}</p>`);
+        }
+    };
 }
 
-// --- GẮN SỰ KIỆN CHO CÁC NÚT ĐIỀU KHIỂN ---
+// ==========================================
+// 4. HÀM GỬI LỆNH (CLIENT -> SERVER)
+// ==========================================
 
-// Nút kết nối
-connectButton.addEventListener("click", function() {
-    if (!socket || socket.readyState === WebSocket.CLOSED) {
-        connect();
-    }
-});
-
-// Nút ngắt kết nối
-disconnectButton.addEventListener("click", function() {
+function sendSocketMessage(command, payload = null) {
     if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.close();
-    }
-});
-
-// --- Nhóm Process ---
-btnListProcess.addEventListener("click", function() {
-    // Về "Start/Stop Apps" / "List running Apps":
-    // Trong thực tế, "App" và "Process" là gần như tương đồng.
-    // Tôi gộp chúng lại thành "Process" cho rõ ràng.
-    sendSocketMessage("list_processes");
-});
-
-btnStartProcess.addEventListener("click", function() {
-    const processName = processNameInput.value;
-    if (processName) {
-        sendSocketMessage("start_process", { name: processName });
-        processNameInput.value = ""; // Xóa input
+        const message = JSON.stringify({ command: command, payload: payload });
+        socket.send(message);
+        console.log(`[SENT]: ${message}`);
     } else {
-        alert("Vui lòng nhập tên process (ví dụ: notepad.exe)");
+        alert("Mất kết nối tới server!");
+        showLoginView("Mất kết nối", true);
     }
-});
+}
 
-btnStopProcess.addEventListener("click", function() {
-    const processId = processPidInput.value;
-    if (processId) {
-        sendSocketMessage("stop_process", { id: processId });
-        processPidInput.value = ""; // Xóa input
-    } else {
-        alert("Vui lòng nhập PID hoặc Tên process để dừng.");
+// ==========================================
+// 5. HÀM XỬ LÝ PHẢN HỒI (SERVER -> CLIENT)
+// ==========================================
+
+function handleServerResponse(data) {
+    const cmd = data.command;
+    const payload = data.payload;
+
+    // Lấy Base URL để tải ảnh/video qua HTTP
+    const ip = ipInput.value;
+    const port = portInput.value;
+    const httpBaseUrl = `http://${ip}:${port}`;
+
+    switch (cmd) {
+        case "list_apps":
+            showTableModal("Danh sách Ứng dụng (Apps)", payload);
+            break;
+            
+        case "list_processes":
+            showTableModal("Danh sách Processes", payload);
+            break;
+
+        case "screen_capture":
+            // Payload mong đợi: "/captures/screenshot_xxx.png"
+            const imgUrl = httpBaseUrl + payload;
+            showImageModal("Ảnh chụp màn hình", imgUrl);
+            break;
+
+        case "screen_record":
+            // Payload mong đợi: "/captures/video_xxx.mp4"
+            const vidUrl = httpBaseUrl + payload;
+            showVideoModal("Video quay màn hình", vidUrl);
+            break;
+
+        case "error":
+            showModal("Lỗi", `<p style="color:red; font-weight:bold;">${payload}</p>`);
+            break;
+
+        default:
+            // Các tin nhắn text thông thường
+            showModal("Thông báo", `<pre>${JSON.stringify(payload, null, 2)}</pre>`);
+            break;
     }
-});
+}
 
-// --- Nhóm Screen ---
-btnScreenCapture.addEventListener("click", function() {
-    sendSocketMessage("screen_capture");
-});
+// ==========================================
+// 6. CÁC HÀM HIỂN THỊ MODAL
+// ==========================================
 
-btnScreenRecord.addEventListener("click", function() {
-    const duration = parseInt(recordDurationInput.value, 10);
-    if (duration > 0) {
-        sendSocketMessage("screen_record", { duration: duration });
-    } else {
-        alert("Thời gian quay phải lớn hơn 0 giây.");
+function showModal(title, htmlContent) {
+    modalTitle.innerText = title;
+    modalBody.innerHTML = htmlContent;
+    modalFooter.classList.add("hidden"); // Ẩn footer mặc định
+    resultModal.classList.remove("hidden");
+}
+
+function showTableModal(title, listData) {
+    if (!Array.isArray(listData) || listData.length === 0) {
+        showModal(title, "<p>Danh sách trống.</p>");
+        return;
     }
-});
+    // Tạo bảng động từ keys của object đầu tiên
+    let html = '<table class="result-table"><thead><tr>';
+    const headers = Object.keys(listData[0]);
+    headers.forEach(h => html += `<th>${h.toUpperCase()}</th>`);
+    html += '</tr></thead><tbody>';
+    
+    listData.forEach(row => {
+        html += '<tr>';
+        headers.forEach(key => html += `<td>${row[key]}</td>`);
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    showModal(title, html);
+}
 
-// --- Nhóm Message ---
-btnSendMessage.addEventListener("click", function() {
-    const messageText = messageInput.value;
-    if (messageText) {
-        sendSocketMessage("send_message", { text: messageText });
-        messageInput.value = ""; // Xóa input
-    } else {
-        alert("Vui lòng nhập tin nhắn.");
+function showImageModal(title, url) {
+    const html = `<img src="${url}" class="screenshot-img" alt="Screenshot">`;
+    showModal(title, html);
+    setupDownloadLink(url, `screenshot_${Date.now()}.png`);
+}
+
+function showVideoModal(title, url) {
+    const html = `
+        <div style="text-align:center">
+            <video controls autoplay style="max-height: 60vh;">
+                <source src="${url}" type="video/mp4">
+                Trình duyệt không hỗ trợ video này.
+            </video>
+        </div>`;
+    showModal(title, html);
+    setupDownloadLink(url, `record_${Date.now()}.mp4`);
+}
+
+function setupDownloadLink(url, filename) {
+    downloadLink.href = url;
+    downloadLink.download = filename;
+    modalFooter.classList.remove("hidden");
+}
+
+// ==========================================
+// 7. GẮN SỰ KIỆN CHO CÁC NÚT (EVENT LISTENERS)
+// ==========================================
+
+// Nút Kết nối / Ngắt kết nối
+connectButton.addEventListener("click", () => { if (!socket) connect(); });
+disconnectButton.addEventListener("click", () => { if (socket) socket.close(); });
+
+// Nhóm APPS
+document.getElementById("btn-list-apps").onclick = () => sendSocketMessage("list_apps");
+document.getElementById("btn-start-app").onclick = () => {
+    const name = document.getElementById("app-name-start").value;
+    if(name) sendSocketMessage("start_app", { name: name });
+};
+document.getElementById("btn-stop-app").onclick = () => {
+    const id = document.getElementById("app-pid-stop").value;
+    if(id) sendSocketMessage("stop_app", { id: id });
+};
+
+// Nhóm PROCESSES
+document.getElementById("btn-list-process").onclick = () => sendSocketMessage("list_processes");
+document.getElementById("btn-start-process").onclick = () => {
+    const name = document.getElementById("process-name-start").value;
+    if(name) sendSocketMessage("start_process", { name: name });
+};
+document.getElementById("btn-stop-process").onclick = () => {
+    const id = document.getElementById("process-pid-stop").value;
+    if(id) sendSocketMessage("stop_process", { id: id });
+};
+
+// Nhóm SCREEN
+document.getElementById("btn-screen-capture").onclick = () => sendSocketMessage("screen_capture");
+document.getElementById("btn-screen-record").onclick = () => {
+    const sec = parseInt(document.getElementById("record-duration").value);
+    if(sec > 0) {
+        sendSocketMessage("screen_record", { duration: sec });
+        alert(`Đang yêu cầu quay video trong ${sec} giây. Vui lòng đợi...`);
     }
-});
+};
 
-// --- Nhóm System ---
-btnShutdown.addEventListener("click", function() {
-    // Thêm một bước xác nhận cho hành động nguy hiểm
-    if (confirm("Bạn có CHẮC CHẮN muốn shutdown server không?")) {
+// Nhóm MESSAGE & SYSTEM
+document.getElementById("btn-send-message").onclick = () => {
+    const msg = document.getElementById("message-text").value;
+    if(msg) sendSocketMessage("send_message", { text: msg });
+};
+document.getElementById("btn-shutdown").onclick = () => {
+    if(confirm("CẢNH BÁO: Bạn có chắc chắn muốn tắt Server không?")) {
         sendSocketMessage("shutdown");
     }
-});
+};
