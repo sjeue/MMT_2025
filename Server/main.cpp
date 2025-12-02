@@ -1,3 +1,5 @@
+#include <nlohmann/json.hpp> // vcpkg install nlohmann-json:x64-windows
+
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/asio/strand.hpp>
@@ -18,38 +20,9 @@ namespace beast = boost::beast;
 namespace websocket = beast::websocket;
 namespace net = boost::asio;
 using tcp = boost::asio::ip::tcp;
+using json = nlohmann::json;
 
 //------------------------------------------------------------------------------
-
-/**
- * @brief Lớp giả mạo việc lấy thông tin hệ thống. (Không đổi)
- */
-class SystemMonitor
-{
-    std::mt19937 gen_;
-    std::uniform_real_distribution<> cpu_dist_;
-    std::uniform_int_distribution<> ram_dist_;
-
-public:
-    SystemMonitor()
-        : gen_(std::random_device{}()),
-        cpu_dist_(10.0, 70.0),
-        ram_dist_(2048, 4096)
-    {
-    }
-
-    std::string getStatsJson()
-    {
-        double cpu = cpu_dist_(gen_);
-        int ram = ram_dist_(gen_);
-
-        std::string json = "{";
-        json += "\"cpu\": " + std::to_string(cpu) + ",";
-        json += "\"ram\": " + std::to_string(ram);
-        json += "}";
-        return json;
-    }
-};
 
 /**
  * @brief Đại diện cho MỘT kết nối WebSocket của client
@@ -59,12 +32,9 @@ class WebsocketSession : public std::enable_shared_from_this<WebsocketSession>
 {
     websocket::stream<beast::tcp_stream> ws_;
     beast::flat_buffer buffer_;
+    
+    net::steady_timer timer_; // can remove
 
-    // Tích hợp Monitor và Timer trực tiếp vào Session
-    SystemMonitor monitor_;
-    net::steady_timer timer_;
-
-    // SỬA LỖI C2039: Khai báo strand sử dụng Executor type của io_context
     net::strand<net::io_context::executor_type> strand_;
 
     // Hàng đợi tin nhắn đơn giản cho việc ghi tuần tự
@@ -74,12 +44,9 @@ public:
     // Hàm tạo: Không cần SharedState nữa
     WebsocketSession(tcp::socket&& socket)
         : ws_(std::move(socket)),
-        // Khởi tạo timer với cùng io_context của socket
-        timer_(ws_.get_executor()),
-        // SỬA LỖI: Lấy Executor từ io_context gốc của socket
-        strand_(static_cast<net::io_context&>(ws_.get_executor().context()).get_executor())
-    {
-    }
+          timer_(ws_.get_executor()), // can remove
+          strand_(static_cast<net::io_context&>(ws_.get_executor().context()).get_executor())
+    {}
 
     void run()
     {
@@ -108,8 +75,7 @@ public:
                 ss));
     }
     bool is_open() const {
-        // ws_ đã là thành viên của lớp này, nên có thể truy cập private
-        return ws_.is_open();
+        return ws_.is_open(); 
     }
 
 private:
@@ -122,14 +88,14 @@ private:
         std::cout << "[Session] Client connected." << std::endl;
 
         // Bắt đầu chu kỳ gửi dữ liệu ngay sau khi chấp nhận
-        scheduleTimer();
-
+        scheduleTimer(); // can remove
+        
         // Bắt đầu vòng lặp đọc (vẫn cần để phát hiện ngắt kết nối)
         do_read();
     }
-
+    
     // --- TIMER LOGIC (Thay thế SharedState::onTimer) ---
-    void scheduleTimer()
+    void scheduleTimer() // can remove
     {
         // Kiểm tra xem socket có còn mở không trước khi hẹn giờ
         if (!ws_.is_open()) return;
@@ -144,7 +110,7 @@ private:
                     std::placeholders::_1)));
     }
 
-    void onTimer(beast::error_code ec)
+    void onTimer(beast::error_code ec) // can remove
     {
         if (ec == net::error::operation_aborted) return; // Bị hủy do đóng socket
         if (ec) {
@@ -153,14 +119,11 @@ private:
         }
 
         // Lấy dữ liệu và gửi đi
-        std::string statsJson = monitor_.getStatsJson();
-        auto const ss = std::make_shared<std::string const>(std::move(statsJson));
-
+        
         // Gửi tin nhắn nội bộ
-        send(ss);
-
+        
         // Lặp lại
-        scheduleTimer();
+        scheduleTimer(); 
     }
     // ----------------------------------------------------
 
@@ -183,8 +146,7 @@ private:
 
         if (ec == websocket::error::closed || ec == net::error::eof) {
             std::cout << "[Session] Connection closed by client." << std::endl;
-            // Dừng timer khi ngắt kết nối
-            timer_.cancel();
+            timer_.cancel(); 
             return;
         }
 
@@ -193,10 +155,51 @@ private:
             timer_.cancel();
             return;
         }
+        
+        // ------------------------------------------------------------------
+        // LOGIC XỬ LÝ TIN NHẮN ĐẾN TỪ CLIENT (MỚI)
+        // ------------------------------------------------------------------
+        
+        // Lấy nội dung tin nhắn dưới dạng chuỗi
+        // Lưu ý: ws_.read đã chuyển dữ liệu vào buffer_
+        std::string message = beast::buffers_to_string(buffer_.data());
 
+        std::cout << "[Client] Received: " << message << std::endl;
+
+        // --- MÔ PHỎNG XỬ LÝ LỆNH JSON ---
+        try {
+            // Phân tích cú pháp JSON
+            json j = json::parse(message);
+
+            if (!j.is_object()) {
+            std::cerr << "!!! SERVER WARNING: Message is not a JSON object." << std::endl;
+            // Xóa buffer và tiếp tục đọc
+            buffer_.consume(buffer_.size());
+            do_read(); 
+            return;
+        }
+            if (j.count("command") && j["command"].is_string()) {
+            std::string command = j["command"].get<std::string>();
+
+            if (command == ""){
+
+            }
+        }else {
+            std::cerr << "!!! SERVER WARNING: 'command' field missing or not a string." << std::endl;
+        }
+            
+        } catch (const json::parse_error& e) {
+            std::cerr << "!!! SERVER ERROR: Lỗi JSON: " << e.what() << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "!!! SERVER ERROR: Lỗi xử lý tin nhắn: " << e.what() << std::endl;
+        }
+    // ------------------------------------------------------------------
+    // Xóa buffer và tiếp tục đọc
         buffer_.consume(buffer_.size());
-        do_read();
-    }
+        do_read(); // Tiếp tục vòng lặp đọc
+
+}
+
 
     void on_send(std::shared_ptr<std::string const> const& ss)
     {
@@ -219,7 +222,7 @@ private:
     void on_write(beast::error_code ec, std::size_t bytes_transferred)
     {
         boost::ignore_unused(bytes_transferred);
-
+        
         if (ec) {
             std::cerr << "[Session] Write error: " << ec.message() << std::endl;
             timer_.cancel();
@@ -250,16 +253,16 @@ class Listener : public std::enable_shared_from_this<Listener>
 {
     net::io_context& ioc_;
     tcp::acceptor acceptor_;
-
+    
     // Lưu trữ session duy nhất để quản lý
-    std::shared_ptr<WebsocketSession> active_session_;
+    std::shared_ptr<WebsocketSession> active_session_; 
 
 public:
     Listener(
         net::io_context& ioc,
         tcp::endpoint endpoint)
         : ioc_(ioc),
-        acceptor_(ioc)
+          acceptor_(ioc)
     {
         beast::error_code ec;
 
@@ -292,20 +295,18 @@ private:
     {
         if (ec) {
             std::cerr << "[Listener] Accept error: " << ec.message() << std::endl;
-        }
-        else {
+        } else {
             if (active_session_ && active_session_->is_open()) {
                 // Tùy chọn: Từ chối kết nối thứ hai
                 std::cerr << "[Listener] Connection refused: Server already has an active client." << std::endl;
                 // Có thể đóng socket ngay lập tức ở đây
-            }
-            else {
+            } else {
                 // Tạo và lưu session duy nhất
                 active_session_ = std::make_shared<WebsocketSession>(std::move(socket));
                 active_session_->run();
             }
         }
-
+        
         // Tiếp tục lắng nghe để chấp nhận kết nối lại sau khi client ngắt kết nối
         do_accept();
     }
@@ -326,12 +327,12 @@ int main(int argc, char* argv[])
     std::cout << "Port: " << port << std::endl;
     std::cout << "Threads: " << threads << std::endl;
 
-    net::io_context ioc{ threads };
+    net::io_context ioc{threads};
 
     // Chỉ tạo Listener (Không cần SharedState)
     std::make_shared<Listener>(
         ioc,
-        tcp::endpoint{ address, port })
+        tcp::endpoint{address, port})
         ->run();
 
     // Chạy io_context trên một nhóm thread
@@ -340,7 +341,7 @@ int main(int argc, char* argv[])
     for (auto i = threads - 1; i > 0; --i) {
         v.emplace_back([&ioc] {
             ioc.run();
-            });
+        });
     }
 
     ioc.run();
