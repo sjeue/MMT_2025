@@ -1,197 +1,353 @@
-/*
- * SERVER C++ DÙNG POCO
- * -------------------
- * Sử dụng thư viện POCO (một framework hoàn chỉnh)
- *
- * Chức năng:
- * 1. Mở port 9001.
- * 2. Quản lý danh sách client (thêm/xóa an toàn).
- * 3. Cứ 1 giây, gửi dữ liệu (CPU/RAM giả mạo) cho tất cả client.
- *
- * Biên dịch (trên MSYS2 MINGW64):
- * g++ main.cpp -o server.exe -std=c++14 -lPocoNet -lPocoUtil -lPocoFoundation -lpthread -lws2_32
- */
-
-#include <Poco/Net/HTTPServer.h>
-#include <Poco/Net/HTTPRequestHandler.h>
-#include <Poco/Net/HTTPRequestHandlerFactory.h>
-#include <Poco/Net/HTTPServerRequest.h>
-#include <Poco/Net/HTTPServerResponse.h>
-#include <Poco/Net/WebSocket.h>
-#include <Poco/Net/NetException.h>
-#include <Poco/Util/ServerApplication.h>
-#include <Poco/Mutex.h>
+#include <boost/beast/core.hpp>
+#include <boost/beast/websocket.hpp>
+#include <boost/asio/strand.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/steady_timer.hpp>
+#include <algorithm>
+#include <cstdlib>
+#include <functional>
 #include <iostream>
+#include <memory>
 #include <string>
-#include <set>
 #include <thread>
-#include <chrono>
 #include <random>
-#include <sstream>
-#include <iomanip> // Để dùng std::setprecision
 
-using Poco::Net::HTTPServer;
-using Poco::Net::HTTPRequestHandler;
-using Poco::Net::HTTPRequestHandlerFactory;
-using Poco::Net::HTTPServerRequest;
-using Poco::Net::HTTPServerResponse;
-using Poco::Net::WebSocket;
-using Poco::Net::WebSocketException;
-using Poco::Util::ServerApplication;
+//------------------------------------------------------------------------------
+// Namespaces cho gọn
+namespace beast = boost::beast;
+namespace websocket = beast::websocket;
+namespace net = boost::asio;
+using tcp = boost::asio::ip::tcp;
 
-// -----------------------------------------------------------------------------
-// PHẦN QUẢN LÝ TRẠNG THÁI (GLOBAL STATE)
-// -----------------------------------------------------------------------------
-
-// Dùng mutex của POCO để bảo vệ danh sách
-Poco::FastMutex g_mutex;
-// Danh sách chứa tất cả các WebSocket đang hoạt động
-std::set<WebSocket*> g_connections;
+//------------------------------------------------------------------------------
 
 /**
- * @brief Thread này chạy mãi mãi, cứ 1 giây gửi
- * dữ liệu cho TẤT CẢ các client đang kết nối.
+ * @brief Lớp giả mạo việc lấy thông tin hệ thống. (Không đổi)
  */
-void broadcast_loop() {
-    // Thiết lập bộ tạo số ngẫu nhiên
-    std::mt19937 gen(std::random_device{}());
-    std::uniform_real_distribution<> cpu_dist(10.0, 70.0);
-    std::uniform_int_distribution<> ram_dist(2048, 4096);
+class SystemMonitor
+{
+    std::mt19937 gen_;
+    std::uniform_real_distribution<> cpu_dist_;
+    std::uniform_int_distribution<> ram_dist_;
 
-    while (true) {
-        // Chờ 1 giây
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-
-        // 1. Tạo dữ liệu JSON giả
-        double cpu = cpu_dist(gen);
-        int ram = ram_dist(gen);
-
-        std::stringstream ss;
-        ss << "{\"cpu\": " << std::fixed << std::setprecision(1) << cpu 
-           << ", \"ram\": " << ram << "}";
-        std::string json_message = ss.str();
-
-        // 2. Khóa mutex và gửi tin nhắn
-        Poco::FastMutex::ScopedLock lock(g_mutex);
-
-        // Dùng iterator để có thể xóa các client đã chết
-        for (auto it = g_connections.begin(); it != g_connections.end(); /* không tăng ở đây */) {
-            WebSocket* ws = *it;
-            try {
-                // Gửi dữ liệu dưới dạng TEXT
-                ws->sendFrame(json_message.data(), json_message.length(), WebSocket::FRAME_TEXT);
-                ++it; // Chỉ tăng iterator nếu gửi thành công
-            } catch (WebSocketException &e) {
-                // Bắt lỗi (ví dụ: client đã ngắt kết nối đột ngột)
-                std::cerr << "[Broadcast] Lỗi khi gửi: " << e.displayText() << ". Đang xóa client..." << std::endl;
-                // Xóa client "chết" khỏi danh sách
-                it = g_connections.erase(it); 
-            }
-        }
+public:
+    SystemMonitor()
+        : gen_(std::random_device{}()),
+        cpu_dist_(10.0, 70.0),
+        ram_dist_(2048, 4096)
+    {
     }
-}
 
-// -----------------------------------------------------------------------------
-// PHẦN XỬ LÝ KẾT NỐI (SERVER LOGIC)
-// -----------------------------------------------------------------------------
+    std::string getStatsJson()
+    {
+        double cpu = cpu_dist_(gen_);
+        int ram = ram_dist_(gen_);
+
+        std::string json = "{";
+        json += "\"cpu\": " + std::to_string(cpu) + ",";
+        json += "\"ram\": " + std::to_string(ram);
+        json += "}";
+        return json;
+    }
+};
 
 /**
- * @brief Class này xử lý MỘT kết nối WebSocket
+ * @brief Đại diện cho MỘT kết nối WebSocket của client
+ * Tích hợp Timer và logic gửi tin nhắn.
  */
-class WebSocketRequestHandler : public HTTPRequestHandler {
+class WebsocketSession : public std::enable_shared_from_this<WebsocketSession>
+{
+    websocket::stream<beast::tcp_stream> ws_;
+    beast::flat_buffer buffer_;
+
+    // Tích hợp Monitor và Timer trực tiếp vào Session
+    SystemMonitor monitor_;
+    net::steady_timer timer_;
+
+    // SỬA LỖI C2039: Khai báo strand sử dụng Executor type của io_context
+    net::strand<net::io_context::executor_type> strand_;
+
+    // Hàng đợi tin nhắn đơn giản cho việc ghi tuần tự
+    std::vector<std::shared_ptr<std::string const>> queue_;
+
+public:
+    // Hàm tạo: Không cần SharedState nữa
+    WebsocketSession(tcp::socket&& socket)
+        : ws_(std::move(socket)),
+        // Khởi tạo timer với cùng io_context của socket
+        timer_(ws_.get_executor()),
+        // SỬA LỖI: Lấy Executor từ io_context gốc của socket
+        strand_(static_cast<net::io_context&>(ws_.get_executor().context()).get_executor())
+    {
+    }
+
+    void run()
+    {
+        ws_.set_option(
+            websocket::stream_base::timeout::suggested(
+                beast::role_type::server));
+
+        // Bắt đầu bắt tay (handshake)
+        ws_.async_accept(
+            net::bind_executor(
+                strand_,
+                std::bind(
+                    &WebsocketSession::on_accept,
+                    shared_from_this(),
+                    std::placeholders::_1)));
+    }
+
+    // Hàm gửi tin nhắn (Bây giờ chỉ được gọi nội bộ)
+    void send(std::shared_ptr<std::string const> const& ss)
+    {
+        net::post(
+            strand_,
+            std::bind(
+                &WebsocketSession::on_send,
+                shared_from_this(),
+                ss));
+    }
+    bool is_open() const {
+        // ws_ đã là thành viên của lớp này, nên có thể truy cập private
+        return ws_.is_open();
+    }
+
 private:
-    WebSocket* m_ws = nullptr;
+    void on_accept(beast::error_code ec)
+    {
+        if (ec) {
+            std::cerr << "[Session] Accept error: " << ec.message() << std::endl;
+            return;
+        }
+        std::cout << "[Session] Client connected." << std::endl;
+
+        // Bắt đầu chu kỳ gửi dữ liệu ngay sau khi chấp nhận
+        scheduleTimer();
+
+        // Bắt đầu vòng lặp đọc (vẫn cần để phát hiện ngắt kết nối)
+        do_read();
+    }
+
+    // --- TIMER LOGIC (Thay thế SharedState::onTimer) ---
+    void scheduleTimer()
+    {
+        // Kiểm tra xem socket có còn mở không trước khi hẹn giờ
+        if (!ws_.is_open()) return;
+
+        timer_.expires_after(std::chrono::seconds(1));
+        timer_.async_wait(
+            net::bind_executor(
+                strand_, // Quan trọng: Chạy trên strand để đồng bộ hóa với ghi/đọc
+                std::bind(
+                    &WebsocketSession::onTimer,
+                    shared_from_this(),
+                    std::placeholders::_1)));
+    }
+
+    void onTimer(beast::error_code ec)
+    {
+        if (ec == net::error::operation_aborted) return; // Bị hủy do đóng socket
+        if (ec) {
+            std::cerr << "[Timer] Error: " << ec.message() << std::endl;
+            return;
+        }
+
+        // Lấy dữ liệu và gửi đi
+        std::string statsJson = monitor_.getStatsJson();
+        auto const ss = std::make_shared<std::string const>(std::move(statsJson));
+
+        // Gửi tin nhắn nội bộ
+        send(ss);
+
+        // Lặp lại
+        scheduleTimer();
+    }
+    // ----------------------------------------------------
+
+    void do_read()
+    {
+        ws_.async_read(
+            buffer_,
+            net::bind_executor(
+                strand_,
+                std::bind(
+                    &WebsocketSession::on_read,
+                    shared_from_this(),
+                    std::placeholders::_1,
+                    std::placeholders::_2)));
+    }
+
+    void on_read(beast::error_code ec, std::size_t bytes_transferred)
+    {
+        boost::ignore_unused(bytes_transferred);
+
+        if (ec == websocket::error::closed || ec == net::error::eof) {
+            std::cout << "[Session] Connection closed by client." << std::endl;
+            // Dừng timer khi ngắt kết nối
+            timer_.cancel();
+            return;
+        }
+
+        if (ec) {
+            std::cerr << "[Session] Read error: " << ec.message() << std::endl;
+            timer_.cancel();
+            return;
+        }
+
+        buffer_.consume(buffer_.size());
+        do_read();
+    }
+
+    void on_send(std::shared_ptr<std::string const> const& ss)
+    {
+        // Logic Write Queue giữ nguyên
+        queue_.push_back(ss);
+        if (queue_.size() > 1)
+            return;
+
+        ws_.async_write(
+            net::buffer(*queue_.front()),
+            net::bind_executor(
+                strand_,
+                std::bind(
+                    &WebsocketSession::on_write,
+                    shared_from_this(),
+                    std::placeholders::_1,
+                    std::placeholders::_2)));
+    }
+
+    void on_write(beast::error_code ec, std::size_t bytes_transferred)
+    {
+        boost::ignore_unused(bytes_transferred);
+
+        if (ec) {
+            std::cerr << "[Session] Write error: " << ec.message() << std::endl;
+            timer_.cancel();
+            return;
+        }
+
+        queue_.erase(queue_.begin());
+
+        if (!queue_.empty()) {
+            ws_.async_write(
+                net::buffer(*queue_.front()),
+                net::bind_executor(
+                    strand_,
+                    std::bind(
+                        &WebsocketSession::on_write,
+                        shared_from_this(),
+                        std::placeholders::_1,
+                        std::placeholders::_2)));
+        }
+    }
+};
+
+/**
+ * @brief Lắng nghe các kết nối TCP đến (đã đơn giản hóa)
+ * Chấp nhận kết nối, tạo WebsocketSession và NGỪNG lắng nghe.
+ */
+class Listener : public std::enable_shared_from_this<Listener>
+{
+    net::io_context& ioc_;
+    tcp::acceptor acceptor_;
+
+    // Lưu trữ session duy nhất để quản lý
+    std::shared_ptr<WebsocketSession> active_session_;
 
 public:
-    void handleRequest(HTTPServerRequest& request, HTTPServerResponse& response) override {
-        try {
-            // Nâng cấp kết nối HTTP lên WebSocket
-            m_ws = new WebSocket(request, response);
-            std::cout << "[Server] Client connected: " << request.clientAddress().toString() << std::endl;
+    Listener(
+        net::io_context& ioc,
+        tcp::endpoint endpoint)
+        : ioc_(ioc),
+        acceptor_(ioc)
+    {
+        beast::error_code ec;
 
-            // Thêm vào danh sách global
-            {
-                Poco::FastMutex::ScopedLock lock(g_mutex);
-                g_connections.insert(m_ws);
+        acceptor_.open(endpoint.protocol(), ec);
+        if (ec) { /* Xử lý lỗi */ return; }
+        acceptor_.set_option(net::socket_base::reuse_address(true), ec);
+        if (ec) { /* Xử lý lỗi */ return; }
+        acceptor_.bind(endpoint, ec);
+        if (ec) { /* Xử lý lỗi */ return; }
+        acceptor_.listen(net::socket_base::max_listen_connections, ec);
+        if (ec) { /* Xử lý lỗi */ return; }
+    }
+
+    void run()
+    {
+        do_accept();
+    }
+
+private:
+    void do_accept()
+    {
+        // Khi chấp nhận, ta sử dụng ioc_ trực tiếp
+        acceptor_.async_accept(
+            beast::bind_front_handler(
+                &Listener::on_accept,
+                shared_from_this()));
+    }
+
+    void on_accept(beast::error_code ec, tcp::socket socket)
+    {
+        if (ec) {
+            std::cerr << "[Listener] Accept error: " << ec.message() << std::endl;
+        }
+        else {
+            if (active_session_ && active_session_->is_open()) {
+                // Tùy chọn: Từ chối kết nối thứ hai
+                std::cerr << "[Listener] Connection refused: Server already has an active client." << std::endl;
+                // Có thể đóng socket ngay lập tức ở đây
             }
-
-            char buffer[1024];
-            int flags;
-            int n;
-
-            // Vòng lặp nhận tin nhắn (để phát hiện khi client đóng)
-            do {
-                n = m_ws->receiveFrame(buffer, sizeof(buffer), flags);
-                // (Chúng ta không làm gì với tin nhắn, chỉ để phát hiện ngắt kết nối)
-            } while (n > 0 && (flags & WebSocket::FRAME_OP_BITMASK) != WebSocket::FRAME_OP_CLOSE);
-
-            std::cout << "[Server] Client disconnected: " << request.clientAddress().toString() << std::endl;
-
-        } catch (WebSocketException &e) {
-            // Lỗi xảy ra (ví dụ client đóng trình duyệt)
-// Chỉ cần in ra lỗi, bất kể mã lỗi là gì
-std::cerr << "[Handler] Lỗi: " << e.displayText() << std::endl;
+            else {
+                // Tạo và lưu session duy nhất
+                active_session_ = std::make_shared<WebsocketSession>(std::move(socket));
+                active_session_->run();
+            }
         }
 
-        // --- Dọn dẹp ---
-        // Xóa khỏi danh sách global
-        if (m_ws) {
-            Poco::FastMutex::ScopedLock lock(g_mutex);
-            g_connections.erase(m_ws);
-        }
-        
-        // Hủy đối tượng WebSocket
-        delete m_ws;
+        // Tiếp tục lắng nghe để chấp nhận kết nối lại sau khi client ngắt kết nối
+        do_accept();
     }
 };
 
-/**
- * @brief Class này "tạo" ra các RequestHandler mới
- * mỗi khi có client kết nối
- */
-class RequestHandlerFactory : public HTTPRequestHandlerFactory {
-public:
-    HTTPRequestHandler* createRequestHandler(const HTTPServerRequest& request) override {
-        // Chỉ chấp nhận WebSocket
-        if (request.find("Upgrade") != request.end() && Poco::icompare(request["Upgrade"], "websocket") == 0) {
-            return new WebSocketRequestHandler;
-        }
-        // Từ chối các kết nối HTTP thông thường
-        return nullptr; 
+//------------------------------------------------------------------------------
+// HÀM MAIN (Không đổi)
+//------------------------------------------------------------------------------
+int main(int argc, char* argv[])
+{
+    // Cấu hình mặc định
+    auto const address = net::ip::make_address("0.0.0.0");
+    auto const port = static_cast<unsigned short>(9001);
+    auto const threads = std::max<int>(1, std::thread::hardware_concurrency());
+
+    std::cout << "Starting Single-Client WebSocket Server..." << std::endl;
+    std::cout << "Address: " << address.to_string() << std::endl;
+    std::cout << "Port: " << port << std::endl;
+    std::cout << "Threads: " << threads << std::endl;
+
+    net::io_context ioc{ threads };
+
+    // Chỉ tạo Listener (Không cần SharedState)
+    std::make_shared<Listener>(
+        ioc,
+        tcp::endpoint{ address, port })
+        ->run();
+
+    // Chạy io_context trên một nhóm thread
+    std::vector<std::thread> v;
+    v.reserve(threads - 1);
+    for (auto i = threads - 1; i > 0; --i) {
+        v.emplace_back([&ioc] {
+            ioc.run();
+            });
     }
-};
 
-/**
- * @brief Lớp Server chính (dùng để chạy)
- */
-class WebSocketServer : public ServerApplication {
-protected:
-    int main(const std::vector<std::string>& args) override {
-        // 1. Khởi động thread broadcast
-        std::thread broadcaster_thread(broadcast_loop);
+    ioc.run();
 
-        // 2. Cấu hình và chạy server POCO
-        unsigned short port = 9001;
-        HTTPServer srv(new RequestHandlerFactory, port);
-        srv.start(); // Bắt đầu server
-        
-        std::cout << "Starting WebSocket Server on port " << port << "..." << std::endl;
-
-        // Chờ lệnh dừng (ví dụ: Ctrl+C)
-        waitForTerminationRequest();
-        
-        // Dừng server
-        srv.stop();
-
-        broadcaster_thread.join();
-        return Application::EXIT_OK;
+    for (auto& t : v) {
+        t.join();
     }
-};
 
-// -----------------------------------------------------------------------------
-// HÀM MAIN
-// -----------------------------------------------------------------------------
-int main(int argc, char** argv) {
-    WebSocketServer app;
-    return app.run(argc, argv);
+    return EXIT_SUCCESS;
 }
