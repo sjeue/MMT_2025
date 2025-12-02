@@ -1,5 +1,8 @@
 #include <nlohmann/json.hpp> // vcpkg install nlohmann-json:x64-windows
 
+//HEADERS (remember to link cpp files before run)
+#include "Headers/shutdown.h"
+
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/asio/strand.hpp>
@@ -13,6 +16,7 @@
 #include <string>
 #include <thread>
 #include <random>
+
 
 //------------------------------------------------------------------------------
 // Namespaces cho gọn
@@ -181,9 +185,10 @@ private:
             if (j.count("command") && j["command"].is_string()) {
             std::string command = j["command"].get<std::string>();
 
-            if (command == ""){
-
+            if (command == "shutdown"){
+                shutdown();
             }
+            
         }else {
             std::cerr << "!!! SERVER WARNING: 'command' field missing or not a string." << std::endl;
         }
@@ -267,13 +272,25 @@ public:
         beast::error_code ec;
 
         acceptor_.open(endpoint.protocol(), ec);
-        if (ec) { /* Xử lý lỗi */ return; }
+        if (ec) { 
+        std::cerr << "[Listener::ctor] Open error: " << ec.message() << std::endl; 
+        throw std::runtime_error("Listener failed to open."); // Ném ngoại lệ
+        }
         acceptor_.set_option(net::socket_base::reuse_address(true), ec);
-        if (ec) { /* Xử lý lỗi */ return; }
+        if (ec) { 
+            std::cerr << "[Listener::ctor] Set option error: " << ec.message() << std::endl; 
+            throw std::runtime_error("Listener failed to set option.");
+        }
         acceptor_.bind(endpoint, ec);
-        if (ec) { /* Xử lý lỗi */ return; }
+        if (ec) { 
+            std::cerr << "[Listener::ctor] Bind error: " << ec.message() << std::endl; 
+            throw std::runtime_error("Listener failed to bind.");
+        }
         acceptor_.listen(net::socket_base::max_listen_connections, ec);
-        if (ec) { /* Xử lý lỗi */ return; }
+        if (ec) { 
+            std::cerr << "[Listener::ctor] Listen error: " << ec.message() << std::endl; 
+            throw std::runtime_error("Listener failed to listen.");
+        }
     }
 
     void run()
