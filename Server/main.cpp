@@ -4,6 +4,9 @@
 #include "Headers/shutdown.h"
 #include "Headers/keylogger.h"
 #include "Headers/webcam.h"
+#include "Headers/apps.h"
+#include "Headers/processes.h"
+#include "Headers/screenshot.h"
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
@@ -371,6 +374,143 @@ private:
                 // Dấu hiệu nhận biết: request không phải WS mà là HTTP
                 std::cout << "[HTTP] Received non-WS request. Ignoring in WS session." << std::endl;
             }
+            // ----- Mới
+            // 1. MÀN HÌNH (Khớp lệnh "screen_capture" của Client)
+            // ----------------------------------------------------
+            else if (command == "screen_capture") {
+                // Giả sử hàm captureScreen() vẫn trả về string path như cũ
+                file_path = captureScreen(); 
+                if (!file_path.empty()) {
+                    response_json = {
+                        {"command", "screen_capture"}, // Client đợi lệnh này để showImageModal
+                        {"payload", file_path}
+                    };
+                    send(std::make_shared<std::string const>(response_json.dump()));
+                }
+            }
+
+            // ----------------------------------------------------
+            // 2. DANH SÁCH APPS (Khớp lệnh "list_apps")
+            // ----------------------------------------------------
+            else if (command == "list_apps") {
+                json list = listApps(); // Hàm này giờ trả về JSON Array
+                response_json = {
+                    {"command", "list_apps"}, 
+                    {"payload", list} // Gửi nguyên mảng JSON về cho showTableModal
+                };
+                send(std::make_shared<std::string const>(response_json.dump()));
+            }
+
+            // ----------------------------------------------------
+            // 3. MỞ APP (Khớp lệnh "start_app", payload: {name: "..."})
+            // ----------------------------------------------------
+            else if (command == "start_app") {
+                std::string appName = "";
+                // Client gửi: { command: "start_app", payload: { name: "notepad" } }
+                if (j.count("payload") && j["payload"].is_object() && j["payload"].count("name")) {
+                    appName = j["payload"]["name"].get<std::string>();
+                }
+
+                if (!appName.empty() && startApp(appName)) {
+                    response_json = {{"command", "info"}, {"payload", "Đã mở App: " + appName}};
+                } else {
+                    response_json = {{"command", "error"}, {"payload", "Lỗi mở App (hoặc tên trống)."}};
+                }
+                send(std::make_shared<std::string const>(response_json.dump()));
+            }
+
+            // ----------------------------------------------------
+            // 4. ĐÓNG APP (Khớp lệnh "stop_app", payload: {id: "..."})
+            // ----------------------------------------------------
+            else if (command == "stop_app") {
+                int pid = 0;
+                std::string input = "";
+
+                // Lấy dữ liệu gửi lên (có thể là số PID "1234" hoặc tên "notepad")
+                if (j.count("payload") && j["payload"].is_object() && j["payload"].count("id")) {
+                     input = j["payload"]["id"].get<std::string>();
+                }
+
+                // Kiểm tra xem input là SỐ hay CHỮ
+                bool isNumber = !input.empty() && std::all_of(input.begin(), input.end(), ::isdigit);
+
+                if (isNumber) {
+                    // Nếu là số -> Chuyển thành int
+                    try { pid = std::stoi(input); } catch(...) { pid = 0; }
+                } else {
+                    // Nếu là chữ -> Dùng hàm tìm kiếm thông minh
+                    pid = getAppPIDByName(input);
+                    std::cout << "[Apps] Smart Search: '" << input << "' -> PID: " << pid << std::endl;
+                }
+
+                if (pid > 0 && killAppByID(pid)) {
+                     response_json = {{"command", "info"}, {"payload", "Đã đóng App (" + input + ") - PID: " + std::to_string(pid)}};
+                } else {
+                     response_json = {{"command", "error"}, {"payload", "Không tìm thấy App: " + input}};
+                }
+                send(std::make_shared<std::string const>(response_json.dump()));
+            }
+
+            // ----------------------------------------------------
+            // 5. DANH SÁCH PROCESS (Khớp lệnh "list_processes")
+            // ----------------------------------------------------
+            else if (command == "list_processes") {
+                json list = listProcesses();
+                response_json = {
+                    {"command", "list_processes"},
+                    {"payload", list}
+                };
+                send(std::make_shared<std::string const>(response_json.dump()));
+            }
+
+            // ----------------------------------------------------
+            // 6. CHẠY PROCESS (Khớp lệnh "start_process")
+            // ----------------------------------------------------
+            else if (command == "start_process") {
+                std::string procName = "";
+                if (j.count("payload") && j["payload"].is_object() && j["payload"].count("name")) {
+                    procName = j["payload"]["name"].get<std::string>();
+                }
+                
+                // Tận dụng hàm startApp vì cơ chế giống nhau
+                if (!procName.empty() && startApp(procName)) {
+                    response_json = {{"command", "info"}, {"payload", "Đã chạy Process: " + procName}};
+                } else {
+                    response_json = {{"command", "error"}, {"payload", "Lỗi chạy Process."}};
+                }
+                send(std::make_shared<std::string const>(response_json.dump()));
+            }
+
+            // ----------------------------------------------------
+            // 7. DIỆT PROCESS (Khớp lệnh "stop_process")
+            // ----------------------------------------------------
+            else if (command == "stop_process") {
+                int pid = 0;
+                std::string input = "";
+
+                if (j.count("payload") && j["payload"].is_object() && j["payload"].count("id")) {
+                     input = j["payload"]["id"].get<std::string>();
+                }
+
+                // Logic tương tự: Check số hay chữ
+                bool isNumber = !input.empty() && std::all_of(input.begin(), input.end(), ::isdigit);
+
+                if (isNumber) {
+                    try { pid = std::stoi(input); } catch(...) { pid = 0; }
+                } else {
+                    // Tìm PID theo tên process
+                    pid = getProcessPIDByName(input);
+                    std::cout << "[Process] Smart Search: '" << input << "' -> PID: " << pid << std::endl;
+                }
+
+                if (pid > 0 && killProcessByID(pid)) {
+                     response_json = {{"command", "info"}, {"payload", "Đã diệt Process (" + input + ") - PID: " + std::to_string(pid)}};
+                } else {
+                     response_json = {{"command", "error"}, {"payload", "Không tìm thấy Process: " + input}};
+                }
+                send(std::make_shared<std::string const>(response_json.dump()));
+            }
+            // ------ 
             // ------------------------------------------------------------------
         } catch (const json::parse_error& e) {
             std::cerr << "!!! SERVER ERROR: Lỗi JSON: " << e.what() << std::endl;
