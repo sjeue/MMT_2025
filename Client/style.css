@@ -1,129 +1,253 @@
-/* --- CẤU HÌNH CHUNG --- */
+/* =========================================
+   1. CẤU HÌNH CHUNG & VARIABLES
+   ========================================= */
+:root {
+    --bg-dark: #0f172a;
+    --panel-bg: rgba(30, 41, 59, 0.7);
+    --border-color: rgba(148, 163, 184, 0.2);
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    
+    --accent-blue: #3b82f6;
+    --accent-green: #10b981;
+    --accent-red: #ef4444;
+    --accent-orange: #f59e0b;
+    --accent-purple: #8b5cf6;
+    
+    /* Màu cho Terminal Keylogger */
+    --term-bg: #0c0c0c;
+    --term-text: #00ff41;
+}
+
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f0f2f5;
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    margin: 0;
+    min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
-    margin: 0;
-    color: #333;
+    background-image: radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.15) 0%, transparent 20%),
+                      radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 20%);
+    overflow-x: hidden;
 }
 
-/* --- DASHBOARD CONTAINER --- */
-.dashboard {
-    text-align: center;
-    background-color: #ffffff;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-    width: 90%;
-    max-width: 400px; /* Mặc định cho màn hình Login */
-    transition: all 0.3s ease;
-    box-sizing: border-box;
-}
+/* Scrollbar đẹp */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
-/* Class mở rộng chiều rộng khi vào bảng điều khiển */
-.wide-dashboard {
-    max-width: 1000px;
-}
-
-h1 { margin-top: 0; color: #2c3e50; }
-hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
 .hidden { display: none !important; }
 
-/* --- LOGIN FORM --- */
-.connection-settings { display: flex; flex-direction: column; gap: 15px; }
-.input-group { display: flex; flex-direction: column; text-align: left; }
-.input-group label { margin-bottom: 5px; font-weight: 600; color: #555; }
-.input-group input { padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
+/* =========================================
+   2. DASHBOARD & LOGIN SCREEN
+   ========================================= */
+.dashboard {
+    width: 90%;
+    max-width: 420px;
+    padding: 0;
+    border-radius: 16px;
+    transition: all 0.4s ease;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    position: relative;
+    z-index: 10;
+}
 
-/* --- GRID LAYOUT (2 CỘT) --- */
+.wide-dashboard { max-width: 1100px; height: 90vh; display: flex; flex-direction: column; }
+
+.glass-panel {
+    background: var(--panel-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+}
+
+.logo-area { text-align: center; padding: 40px 20px 20px; background: rgba(0,0,0,0.2); border-radius: 16px 16px 0 0; }
+.logo-area h1 { margin: 15px 0 5px; font-weight: 700; letter-spacing: 1px; }
+.logo-area .subtitle { margin: 0; color: var(--text-secondary); font-size: 0.9rem; }
+.pulse-icon { color: var(--accent-blue); animation: pulse 2s infinite; }
+
+.connection-settings { padding: 30px; display: flex; flex-direction: column; gap: 20px; }
+.input-group label { display: block; margin-bottom: 8px; color: var(--text-secondary); font-size: 0.85rem; }
+.input-group input {
+    width: 100%; box-sizing: border-box; padding: 12px 15px;
+    background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color);
+    border-radius: 8px; color: #fff; font-family: 'JetBrains Mono', monospace;
+    transition: 0.3s;
+}
+.input-group input:focus { outline: none; border-color: var(--accent-blue); box-shadow: 0 0 10px rgba(59, 130, 246, 0.3); }
+
+.status-footer { padding: 15px; text-align: center; background: rgba(0,0,0,0.3); border-radius: 0 0 16px 16px; font-size: 0.85rem; color: var(--text-secondary); }
+.status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
+.disconnected { background-color: var(--accent-red); box-shadow: 0 0 8px var(--accent-red); }
+.connected { background-color: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+
+/* =========================================
+   3. CONTROL PANEL LAYOUT
+   ========================================= */
+.control-header {
+    padding: 20px 30px; border-bottom: 1px solid var(--border-color);
+    display: flex; justify-content: space-between; align-items: center;
+}
+.header-left h2 { margin: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 10px; }
+.status-badge { 
+    margin-left: 15px; padding: 4px 10px; background: rgba(16, 185, 129, 0.1); 
+    border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 20px; font-size: 0.75rem; 
+    display: inline-flex; align-items: center;
+}
+
 .control-layout {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    text-align: left;
-    margin-top: 20px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+    padding: 25px; overflow-y: auto; height: 100%;
 }
-/* Responsive: Về 1 cột trên màn hình nhỏ */
-@media (max-width: 768px) {
-    .control-layout { grid-template-columns: 1fr; }
-}
+@media (max-width: 850px) { .control-layout { grid-template-columns: 1fr; } }
 
-/* --- CONTROL GROUPS --- */
-.control-group {
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    background-color: #fafafa;
+/* Cards */
+.card {
+    background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color);
+    border-radius: 12px; overflow: hidden; margin-bottom: 20px;
 }
-.control-group legend { font-weight: bold; color: #007bff; padding: 0 8px; }
+.card-header {
+    background: rgba(0, 0, 0, 0.2); padding: 12px 15px;
+    font-weight: 600; font-size: 0.9rem; color: var(--accent-blue);
+    display: flex; align-items: center; gap: 8px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+}
+.card-body { padding: 15px; display: flex; flex-direction: column; gap: 12px; }
 
-/* --- INPUTS & BUTTONS --- */
+/* Buttons & Inputs */
+.action-row { display: flex; gap: 10px; }
+.action-row input { 
+    flex: 1; padding: 8px 12px; background: rgba(0,0,0,0.2); 
+    border: 1px solid var(--border-color); color: white; border-radius: 6px;
+}
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
 button {
-    padding: 10px 15px;
-    font-size: 14px;
-    font-weight: 600;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    color: white;
-    transition: background 0.2s;
+    cursor: pointer; border: none; border-radius: 6px; padding: 10px 15px;
+    font-weight: 600; font-size: 0.9rem; color: white; transition: 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+button:hover { transform: translateY(-1px); filter: brightness(1.2); }
+button:active { transform: translateY(0); }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btn-glow { background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple)); box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); width: 100%; margin-top: 10px; }
+.btn-primary { background: var(--accent-blue); }
+.btn-success { background: var(--accent-green); }
+.btn-danger { background: var(--accent-red); }
+.btn-warning { background: var(--accent-orange); color: #000; }
+.btn-info { background: rgba(59, 130, 246, 0.2); border: 1px solid var(--accent-blue); color: var(--accent-blue); }
+.btn-info:hover { background: var(--accent-blue); color: white; }
+.btn-neutral { background: #475569; }
+.btn-ghost { background: transparent; border: 1px solid var(--accent-red); color: var(--accent-red); }
+.btn-ghost:hover { background: var(--accent-red); color: white; }
+.full-width { width: 100%; }
+.big-btn { flex-direction: column; padding: 20px; text-align: center; gap: 10px; }
+
+/* =========================================
+   4. MODAL (ĐÃ FIX LỖI POSITION)
+   ========================================= */
+.modal { 
+    /* Fix vị trí để đè lên toàn màn hình - Sửa lỗi giao diện bị thụt */
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
+    height: 100%;
+    z-index: 3000;
+    
+    /* Căn giữa nội dung Modal */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    background: rgba(0,0,0,0.85); 
+    backdrop-filter: blur(5px); 
 }
-.input-with-button { display: flex; gap: 8px; }
-.input-with-button input { flex-grow: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-.input-with-button button { width: auto; white-space: nowrap; }
 
-/* Màu sắc nút bấm */
-#btn-connect, .control-group button { background-color: #007bff; } /* Xanh dương */
-#btn-connect:hover, .control-group button:hover { background-color: #0056b3; }
-
-.btn-warning { background-color: #f39c12 !important; } /* Cam */
-.btn-warning:hover { background-color: #d68910 !important; }
-
-.btn-danger { background-color: #e74c3c !important; } /* Đỏ */
-.btn-danger:hover { background-color: #c0392b !important; }
-
-.btn-neutral { background-color: #95a5a6 !important; } /* Xám */
-.btn-neutral:hover { background-color: #7f8c8d !important; }
-
-.btn-download {
-    display: inline-block; padding: 10px 20px; background-color: #27ae60; 
-    color: white; text-decoration: none; border-radius: 5px; font-weight: bold;
+.modal-content { 
+    position: relative;
+    background: #1e293b; 
+    color: #fff; 
+    width: 90%; 
+    max-width: 800px; 
+    padding: 0; 
+    border: 1px solid var(--accent-blue); 
+    border-radius: 8px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
 }
-.btn-download:hover { background-color: #2ecc71; }
 
-/* --- STATUS INDICATOR --- */
-.status-box { margin-top: 20px; display: flex; align-items: center; justify-content: center; }
-#login-status-light, #control-status-light { width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
-.disconnected { background-color: #e74c3c; }
-.connected { background-color: #2ecc71; }
-
-/* --- MODAL (POPUP) --- */
-.modal {
-    position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%;
-    background-color: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center;
+.close-btn { 
+    position: absolute;
+    color: var(--text-secondary); 
+    top: 15px; 
+    right: 20px; 
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: 0.2s;
+    z-index: 10;
 }
-.modal-content {
-    background-color: #fff; padding: 25px; border-radius: 10px; width: 85%; max-width: 900px;
-    max-height: 90vh; overflow-y: auto; position: relative; text-align: left;
+.close-btn:hover { color: var(--accent-red); }
+
+#modal-title { margin: 0; padding: 20px; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.2); }
+#modal-body { padding: 20px; max-height: 70vh; overflow-y: auto; }
+#modal-footer { padding: 15px 20px; border-top: 1px solid var(--border-color); text-align: right; }
+
+.result-table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; }
+.result-table th { text-align: left; padding: 10px; background: rgba(255,255,255,0.05); color: var(--accent-blue); position: sticky; top: 0; background: #1e293b; }
+.result-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-color); }
+.result-table tr:hover { background: rgba(255,255,255,0.02); }
+
+.screenshot-img { max-width: 100%; max-height: 60vh; border: 1px solid var(--border-color); display: block; margin: 0 auto; }
+.btn-download { text-decoration: none; padding: 8px 15px; background: var(--accent-blue); color: white; border-radius: 4px; font-size: 0.9rem; cursor: pointer; display: inline-block;}
+.btn-download:hover { filter: brightness(1.1); }
+
+/* =========================================
+   5. KEYLOGGER TERMINAL STYLE (MỚI)
+   ========================================= */
+.log-terminal {
+    background-color: var(--term-bg);
+    color: var(--term-text);
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-size: 0.9rem;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+    max-height: 60vh;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    line-height: 1.5;
 }
-.close-btn { position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; color: #aaa; cursor: pointer; }
-.close-btn:hover { color: #333; }
-#modal-body { margin-top: 15px; overflow-x: auto; }
-#modal-footer { margin-top: 20px; text-align: right; border-top: 1px solid #eee; padding-top: 15px; }
 
-/* --- TABLE STYLES --- */
-.result-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.result-table th, .result-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-.result-table th { background-color: #f8f9fa; color: #333; }
-.result-table tr:nth-child(even) { background-color: #f9f9f9; }
+.log-timestamp {
+    color: #888;
+    margin-right: 10px;
+    font-size: 0.8rem;
+}
 
-/* --- IMAGE & VIDEO --- */
-.screenshot-img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; display: block; margin: 0 auto; }
-video { max-width: 100%; display: block; margin: 0 auto; border-radius: 4px; }
+.log-special {
+    color: var(--accent-orange);
+    font-weight: bold;
+}
+
+/* Scrollbar riêng cho Terminal */
+.log-terminal::-webkit-scrollbar { width: 10px; }
+.log-terminal::-webkit-scrollbar-track { background: #1a1a1a; }
+.log-terminal::-webkit-scrollbar-thumb { background: #333; border-radius: 5px; border: 2px solid #1a1a1a; }
+.log-terminal::-webkit-scrollbar-thumb:hover { background: #555; }
+
+/* =========================================
+   6. TOAST NOTIFICATION
+   ========================================= */
+#toast-container { position: fixed; top: 20px; right: 20px; z-index: 4000; display: flex; flex-direction: column; gap: 10px; }
+.toast {
+    background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(10px); color: #fff;
+    padding: 12px 20px; border-radius: 8px; border-left: 4px solid var(--accent-blue);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3); animation: slideIn 0.3s ease; display: flex; align-items: center; gap: 10px; min-width: 250px;
+}
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.1); } 100% { opacity: 1; transform: scale(1); } }
