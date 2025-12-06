@@ -152,7 +152,7 @@ function handleServerResponse(data) {
             showLogModal("Nhật ký bàn phím (Keylogger)", payload);
             break;
 
-        // NEW: Handle Info and Success messages from C++
+        // Handle Info and Success messages from C++
         case "info": showToast(payload, "info"); break;
         case "success": showToast(payload, "success"); break;
 
@@ -231,20 +231,20 @@ function showLogModal(title, logContent) {
 
 // --- HÀM TẢI XUỐNG ---
 function setupDownloadLink(url, filename) {
-    // 1. Luôn lấy nút hiện tại đang nằm trên DOM
+    // Luôn lấy nút hiện tại đang nằm trên DOM
     const currentBtn = document.getElementById("download-link");
     if (!currentBtn) return;
 
-    // 2. Clone nút để xóa sạch các event listener cũ
+    // Clone nút để xóa sạch các event listener cũ
     const newBtn = currentBtn.cloneNode(true);
     currentBtn.parentNode.replaceChild(newBtn, currentBtn);
     
-    // 3. Cấu hình lại nút mới
+    // Cấu hình lại nút mới
     newBtn.href = "#"; 
     newBtn.innerHTML = '<i class="fa-solid fa-download"></i> Tải xuống';
     newBtn.style.display = "inline-block";
 
-    // 4. Gán sự kiện click
+    // Gán sự kiện click
     newBtn.onclick = async (e) => {
         e.preventDefault();
         
