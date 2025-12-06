@@ -3,9 +3,7 @@ using namespace cv;
 using namespace std;
 
 string capture() {
-    // 1. Mở kết nối với camera (Webcam)
-    // 0 là chỉ số của camera mặc định (thường là webcam tích hợp). 
-    // Nếu bạn có nhiều camera, bạn có thể thử 1, 2, ...
+    // Mở kết nối với camera 
     setBreakOnError(true);
     VideoCapture cap(0, CAP_DSHOW); 
     
@@ -14,8 +12,6 @@ string capture() {
         cerr << "Lỗi: Không thể mở camera." << endl;
         return "";
     }
-
-    // Tạo cửa sổ để hiển thị luồng video
     
     // Biến lưu trữ khung hình từ camera
     Mat frame; 
@@ -41,8 +37,8 @@ string capture() {
 // ĐỊNH NGHĨA THỜI GIAN QUAY (tính bằng giây) 
 
 string record(double sec_record) {
-    // 1. Khởi tạo Camera (Webcam)
-    VideoCapture cap(0, CAP_DSHOW); // Sử dụng CAP_DSHOW để tăng tính tương thích trên Windows
+    // Khởi tạo Camera 
+    VideoCapture cap(0, CAP_DSHOW); 
 
     if (!cap.isOpened()) {
         cerr << "Lỗi: Khong the mo camera." << endl;
@@ -50,19 +46,18 @@ string record(double sec_record) {
     }
 
     // Lấy thông số của luồng video
-    double fps = cap.get(CAP_PROP_FPS); // Tốc độ khung hình thực tế
-    if (fps == 0) { // Nếu không lấy được FPS, đặt giá trị mặc định
+    double fps = cap.get(CAP_PROP_FPS); 
+    if (fps == 0) { 
         fps = 30.0;
     }
     int frame_width = static_cast<int>(cap.get(CAP_PROP_FRAME_WIDTH));
     int frame_height = static_cast<int>(cap.get(CAP_PROP_FRAME_HEIGHT));
     Size frame_size(frame_width, frame_height);
 
-    // 2. Khởi tạo VideoWriter (Ghi Video)
+    // Ghi Video
     string output_filename = "captures/video_recording.mp4";
     
-    // Đặt codec: Sử dụng H.264 (cần có FFmpeg hỗ trợ). 
-    // Các codec phổ biến khác: 'XVID', 'MJPG' (ít nén, dung lượng lớn)
+    // Đặt codec: Sử dụng H.264.
     int fourcc = VideoWriter::fourcc('H', '2', '6', '4'); 
 
     VideoWriter writer(output_filename, fourcc, fps, frame_size, true);
@@ -81,9 +76,9 @@ string record(double sec_record) {
 
     cout << "Bat dau quay video trong " << sec_record << " giay..." << endl;
 
-    // 3. Vòng lặp Quay và Ghi Video
+    // Vòng lặp Quay và Ghi Video
     while (true) {
-        // Tính thời gian đã trôi qua (bằng giây)
+        
         current_time = ((double)cv::getTickCount() - start_time) / tick_frequency;
 
         // Thoát nếu đã đạt thời gian quay yêu cầu
@@ -104,12 +99,10 @@ string record(double sec_record) {
         writer.write(frame); 
 
         waitKey(1);
-        // Hiển thị (Tùy chọn)
         imshow("Dang Ghi Hinh", frame); 
 
     }
 
-    // 4. Dọn dẹp
     cap.release();
     writer.release();
     destroyAllWindows();

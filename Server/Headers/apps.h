@@ -1,7 +1,7 @@
 #ifndef APPS_H
 #define APPS_H
 #include <string>
-#include <nlohmann/json.hpp> // Thêm thư viện JSON
+#include <nlohmann/json.hpp> 
 
 // Trả về JSON Array để Client hiển thị bảng
 nlohmann::json listApps();

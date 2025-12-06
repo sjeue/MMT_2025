@@ -1,8 +1,8 @@
 #ifndef SHUTDOWN_H
 #define SHUTDOWN_H
 
-void shutdown();
-
+int shutdown();
+int restart();
 
 
 #endif // SHUTDOWN_H

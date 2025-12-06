@@ -119,6 +119,11 @@
                             <input type="text" id="message-text" placeholder="Gửi thông báo...">
                             <button id="btn-send-message" class="btn-primary"><i class="fa-solid fa-paper-plane"></i> Gửi</button>
                         </div>
+                        
+                        <button id="btn-restart" class="btn-warning full-width" style="margin-top: 10px;">
+                            <i class="fa-solid fa-rotate-right"></i> KHỞI ĐỘNG LẠI (RESTART)
+                        </button>
+
                         <button id="btn-shutdown" class="btn-danger full-width" style="margin-top: 10px;">
                             <i class="fa-solid fa-power-off"></i> TẮT MÁY CHỦ TỪ XA
                         </button>
@@ -140,6 +145,41 @@
     </div>
 
     <div id="toast-container"></div>
+    
+    <div id="templates" class="hidden">
+        
+        <div id="tpl-restart">
+            <div style="text-align: center; padding: 20px;">
+                <i class="fa-solid fa-rotate-right fa-4x" style="color: var(--accent-orange); margin-bottom: 20px; animation: spin 2s infinite linear;"></i>
+                <h3 style="color: #fff; font-size: 1.2rem; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">Khởi động lại Server?</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 30px; line-height: 1.5;">
+                    Máy tính Server sẽ khởi động lại ngay lập tức.<br>
+                    Kết nối sẽ bị ngắt.
+                </p>
+                <div style="display: flex; justify-content: center; gap: 15px;">
+                    <button id="btn-restart-cancel" class="btn-neutral" style="padding: 10px 25px;"><i class="fa-solid fa-xmark"></i> Hủy bỏ</button>
+                    <button id="btn-restart-ok" class="btn-warning" style="padding: 10px 25px; color:#000; box-shadow: 0 0 15px var(--accent-orange);"><i class="fa-solid fa-check"></i> RESTART NGAY</button>
+                </div>
+                <style>@keyframes spin { 100% { -webkit-transform: rotate(360deg); transform:rotate(360deg); } }</style>
+            </div>
+        </div>
+
+        <div id="tpl-shutdown">
+            <div style="text-align: center; padding: 20px;">
+                <i class="fa-solid fa-triangle-exclamation fa-4x" style="color: var(--accent-red); margin-bottom: 20px; animation: pulse 1s infinite;"></i>
+                <h3 style="color: #fff; font-size: 1.2rem; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">Xác nhận tắt hệ thống?</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 30px; line-height: 1.5;">
+                    Hành động này sẽ tắt nguồn máy tính Server ngay lập tức.<br>
+                    Bạn sẽ mất kết nối hoàn toàn.
+                </p>
+                <div style="display: flex; justify-content: center; gap: 15px;">
+                    <button id="btn-confirm-cancel" class="btn-neutral" style="padding: 10px 25px;"><i class="fa-solid fa-xmark"></i> Hủy bỏ</button>
+                    <button id="btn-confirm-ok" class="btn-danger" style="padding: 10px 25px; box-shadow: 0 0 15px var(--accent-red);"><i class="fa-solid fa-power-off"></i> TẮT NGAY</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
 
     <script src="app.js"></script>
 </body>

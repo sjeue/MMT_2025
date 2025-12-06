@@ -12,7 +12,7 @@ json listProcesses() {
 
     hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hProcessSnap == INVALID_HANDLE_VALUE) {
-        return json::array(); // Trả về mảng rỗng nếu lỗi
+        return json::array(); // Trả về mảng rỗng
     }
 
     pe32.dwSize = sizeof(PROCESSENTRY32);
@@ -62,10 +62,10 @@ int getProcessPIDByName(const std::string& procName) {
             std::string currentLower = currentProcName;
             std::transform(currentLower.begin(), currentLower.end(), currentLower.begin(), ::tolower);
 
-            // So sánh xem tên process có CHỨA từ khóa không (vd: "chrome" khớp "chrome.exe")
+            // So sánh xem tên process có chứa từ khóa không
             if (currentLower.find(keyword) != std::string::npos) {
                 foundPID = (int)pe32.th32ProcessID;
-                break; // Tìm thấy thì thoát vòng lặp
+                break; 
             }
         } while (Process32Next(hProcessSnap, &pe32));
     }
