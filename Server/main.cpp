@@ -432,6 +432,7 @@ private:
                 int pid = 0;
                 std::string input = "";
                 if (j.count("payload") && j["payload"].is_object() && j["payload"].count("id")) {
+                    // Lấy input là id của payload
                      input = j["payload"]["id"].get<std::string>();
                 }
 
@@ -476,6 +477,7 @@ private:
                 int pid = 0;
                 std::string input = "";
                 if (j.count("payload") && j["payload"].is_object() && j["payload"].count("id")) {
+                    // Lấy input từ id của payload
                      input = j["payload"]["id"].get<std::string>();
                 }
 
@@ -502,6 +504,7 @@ private:
             else if (command == "send_message") {
                 std::string msg = "";
                 if (j.count("payload") && j["payload"].is_object() && j["payload"].count("text")) {
+                    // Lấy msg từ text của payload
                     msg = j["payload"]["text"].get<std::string>();
                 }
                 
@@ -514,6 +517,9 @@ private:
                 send(std::make_shared<std::string const>(response_json.dump()));
             }
 
+        } catch (const json::parse_error& e) {
+            std::cerr << "!!! SERVER ERROR: Lỗi JSON: " << e.what() << std::endl;
+            
         } catch (const std::exception& e) {
             std::cerr << "SERVER ERROR: " << e.what() << std::endl;
         }
