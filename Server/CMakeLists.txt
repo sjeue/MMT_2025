@@ -30,7 +30,7 @@ set(SOURCE_FILES
     main.cpp
     keylogger.cpp
     webcam.cpp
-    shutdown.cpp
+    control.cpp
     screenshot.cpp
     processes.cpp
     apps.cpp

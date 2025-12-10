@@ -1,0 +1,8 @@
+[33m7bb97e7[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mtest4[m[33m, [m[1;31morigin/test4[m[33m)[m HEAD@{0}: pull: Fast-forward
+[33mf3e7abd[m HEAD@{1}: checkout: moving from test4 to test4
+[33mf3e7abd[m HEAD@{2}: commit: Update web client
+[33m525a43c[m[33m ([m[1;31morigin/test3[m[33m, [m[1;32mtest3[m[33m)[m HEAD@{3}: checkout: moving from test3 to test4
+[33m525a43c[m[33m ([m[1;31morigin/test3[m[33m, [m[1;32mtest3[m[33m)[m HEAD@{4}: commit: Giữ nguyên toàn bộ client, webcam, shutdown, keylogger, thêm screenshot, apps, processes
+[33m3327d0a[m[33m ([m[1;31morigin/testing[m[33m, [m[1;32mtesting[m[33m)[m HEAD@{5}: checkout: moving from testing to test3
+[33m3327d0a[m[33m ([m[1;31morigin/testing[m[33m, [m[1;32mtesting[m[33m)[m HEAD@{6}: checkout: moving from main to testing
+[33mf93e6ca[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{7}: clone: from https://github.com/sjeue/MMT_2025.git
