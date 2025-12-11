@@ -22,30 +22,20 @@
 <b>Giáo viên hướng dẫn:</b> ThS Thầy Đỗ Hoàng Cường<br>
 </p>
 
-<table align="center" style="border: 2px solid black; border-collapse: collapse; text-align: left;">
-    <tr>
-        <th style="border: 2px solid black; padding: 6px;"><b>Họ và Tên</b></th>
-        <th style="border: 2px solid black; padding: 6px; text-align: center;"><b>Mã số sinh viên</b></th>
-    </tr>
-    <tr>
-        <td style="border: 2px solid black; padding: 6px;">Nguyễn Hoài Phước</td>
-        <td style="border: 2px solid black; padding: 6px; text-align: center;">24122022</td>
-    </tr>
-    <tr>
-        <td style="border: 2px solid black; padding: 6px;">Phan Thế Phong</td>
-        <td style="border: 2px solid black; padding: 6px; text-align: center;">24122009</td>
-    </tr>
-    <tr>
-        <td style="border: 2px solid black; padding: 6px;">Lê Thái Ngọc</td>
-        <td style="border: 2px solid black; padding: 6px; text-align: center;">23122012</td>
-    </tr>
+<p align="center">
+<b>SV thực hiện:</b>
+</p>
+
+<table align="center">
+<tr><th>Họ và Tên</th><th>Mã số sinh viên</th></tr>
+<tr><td>Nguyễn Hoài Phước</td><td>24122022</td></tr>
+<tr><td>Phan Thế Phong</td><td>24122009</td></tr>
+<tr><td>Lê Thái Ngọc</td><td>23122012</td></tr>
 </table>
-
-
-
 
 <p align="center">
 <b>ĐỒ ÁN MÔN HỌC</b><br>
 <b>CHƯƠNG TRÌNH CHÍNH QUY</b><br><br>
 Tp. Hồ Chí Minh, Tháng 12 Năm 2025
+</p>
 </p>
