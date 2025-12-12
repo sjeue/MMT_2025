@@ -176,6 +176,323 @@ Giao tiếp hoàn toàn dựa trên **JSON**. Cấu trúc giao tiếp được s
 
 **Kết quả:** Trả về cho **Client** đường dẫn tương đối với file `.exe` của **Server** (`/captures/anh_chup.jpg` cho ảnh, và `/captures/video_recording.mp4` cho video)
 
+## 3.4. Module Apps (Quản lý và Khởi chạy Ứng dụng Windows)
+
+Module Apps đóng vai trò cung cấp toàn bộ khả năng tương tác với ứng dụng trên Windows, bao gồm:
+
+* Liệt kê ứng dụng đang mở.
+* Tìm PID dựa theo tên ứng dụng.
+* Tắt ứng dụng theo PID.
+* Tìm file shortcut `.lnk` trong Start Menu / Desktop.
+* Nhận diện và khởi chạy ứng dụng UWP (Microsoft Store).
+* Khởi chạy ứng dụng theo ba phương thức: **EXE → LNK → UWP**.
+
+Dưới đây là mô tả chi tiết.
+
+### 3.4.1. Chuyển đổi mã hóa UTF-8 ⇆ UTF-16
+Windows API sử dụng WCHAR (UTF-16). Do đó module phải chuyển đổi dữ liệu từ Client (UTF-8) sang UTF-16.
+
+**Các hàm chính:**
+
+| Hàm | Chức năng |
+| :--- | :--- |
+| `StringToWString()` | UTF-8 → UTF-16 |
+| `WStringToString()` | UTF-16 → UTF-8 |
+| `ToLowerW()` | Chuyển chuỗi wide thành chữ thường |
+| `NormalizeKey()` | Chuẩn hóa dấu tiếng Việt (loại bỏ dấu) |
+
+Nhờ đó, hệ thống có thể tìm ứng dụng với input như:
+* `chrome`
+* `ChRômE`
+* `trình duyệt cờ rôm`
+* `word` / `wórd`
+
+### 3.4.2. Liệt kê ứng dụng đang chạy — `listApps()`
+Hệ thống sử dụng các API:
+```cpp
+EnumWindows()
+GetWindowTextW()
+GetWindowThreadProcessId()
+```
+Chỉ các cửa sổ *visible* mới được liệt kê.
+
+**Kết quả trả về dạng JSON:**
+```json
+{
+  "PID": 1234,
+  "Window Name": "Google Chrome"
+}
+```
+
+**Ưu điểm:**
+* Không cần quyền admin.
+* Chỉ liệt kê ứng dụng có giao diện.
+* Thực hiện rất nhanh.
+
+### 3.4.3. Tìm PID theo tên ứng dụng — `getAppPIDByName()`
+Module dùng cơ chế tương tự `EnumWindows`, nhưng thêm bước:
+
+1. Chuẩn hóa tên ứng dụng người dùng nhập (lowercase + bỏ dấu).
+2. Với mỗi cửa sổ:
+    * Lấy tiêu đề.
+    * Hạ chữ.
+    * Chuẩn hóa dấu.
+    * So sánh theo substring.
+
+**Ví dụ:**
+* "chrome" → tìm được "Google Chrome"
+* "máy tính" → tìm được "Calculator" (UWP hoặc Win32)
+* "visual" → tìm được "Visual Studio 2022"
+
+**Kết quả:** Trả về PID đầu tiên khớp với từ khóa.
+
+### 3.4.4. Tắt ứng dụng theo PID — `killAppByID()`
+Sử dụng API:
+```cpp
+OpenProcess(PROCESS_TERMINATE);
+TerminateProcess();
+```
+Trả về `true` / `false` giúp Client biết tiến trình có bị đóng thành công hay không.
+
+### 3.4.5. Smart Search — Tìm Shortcut (.lnk)
+Khi người dùng muốn mở ứng dụng nhưng không biết đường dẫn EXE, module hỗ trợ tìm kiếm file `.lnk` trong:
+
+| Vị trí | Ý nghĩa |
+| :--- | :--- |
+| `CSIDL_PROGRAMS` | Start Menu người dùng |
+| `CSIDL_COMMON_PROGRAMS` | Start Menu toàn hệ thống |
+| `CSIDL_DESKTOPDIRECTORY` | Desktop |
+
+**Cách hoạt động:**
+1. Duyệt toàn bộ thư mục trong 3 vị trí trên.
+2. Chuyển tất cả tên file về lowercase.
+3. So khớp từ khóa người dùng nhập.
+4. Trả về đường dẫn đầy đủ của shortcut.
+
+**Ví dụ:**
+* Nhập: `spotify` → tìm `Spotify.lnk`
+* Nhập: `vs` → tìm `Visual Studio 2022.lnk`
+
+### 3.4.6. Quét và Khởi chạy ứng dụng UWP (Microsoft Store)
+Ứng dụng UWP không có file `.exe`. Do đó module phải thao tác qua thư mục đặc biệt **AppsFolder**.
+
+**Danh sách UWP — `GetAllUwpApps()`**
+Dùng API:
+* `SHGetKnownFolderItem(FOLDERID_AppsFolder)`
+* `IEnumShellItems`
+* `GetDisplayName()`
+
+Mỗi ứng dụng thu được gồm:
+* **Display Name:** Tên hiển thị.
+* **AppUserModelID:** Định danh nội bộ (ví dụ: `Microsoft.WindowsCalculator_8wekyb3d8bbwe!App`).
+
+**Khởi chạy UWP — `StartUwpByName()`**
+Module thực hiện:
+1. So sánh tên ứng dụng (lowercase + bỏ dấu).
+2. Nếu khớp, gọi:
+   ```cpp
+   ShellExecuteW("shell:AppsFolder\<AppUserModelID>")
+   ```
+
+**Ví dụ:**
+* Nhập "calculator" → mở ứng dụng Máy tính.
+* Nhập "photos" → mở ứng dụng Ảnh.
+* *Không cần quyền admin.*
+
+### 3.4.7. Cơ chế mở ứng dụng tổng hợp — `startApp()`
+Đây là hàm trung tâm với thứ tự ưu tiên:
+
+**Bước 1: Mở trực tiếp EXE**
+```cpp
+ShellExecuteW(open, appName)
+```
+Nếu tên ứng dụng trùng với file exe trong PATH → mở ngay.
+
+**Bước 2: Mở bằng shortcut (.lnk)**
+Dùng `FindShortcutPath()`. Nếu tìm thấy → `ShellExecuteW(open, shortcutPath)`.
+
+**Bước 3: Mở UWP**
+Nếu không có `.exe` hoặc `.lnk` → fallback sang UWP.
+
+**Kết luận:**
+Hàm trả về:
+* `true` → nếu mở app thành công theo bất kỳ phương pháp nào.
+* `false` → nếu cả EXE, LNK và UWP đều không tìm thấy.
+
+### 3.4.8. Ưu điểm của Module Apps
+
+| Tính năng | Mô tả |
+| :--- | :--- |
+| **Tìm kiếm thông minh** | Hỗ trợ tiếng Việt có/không dấu, lowercase |
+| **Hỗ trợ 3 kiểu ứng dụng** | Win32 EXE, Shortcut LNK, UWP |
+| **Không yêu cầu quyền admin** | Tất cả tính năng chạy bằng quyền User |
+| **Native Windows API** | Tương thích mọi phiên bản Windows |
+| **Đa dạng đầu vào** | Người dùng có thể nhập tên bất kỳ để tìm |
+
+## 3.5. Module Processes (processes.cpp)
+
+Module `processes.cpp` chịu trách nhiệm quản lý tiến trình hệ thống Windows, bao gồm:
+
+* Liệt kê tất cả tiến trình đang chạy.
+* Tìm PID của tiến trình theo tên.
+* Kết thúc một tiến trình theo PID.
+
+Module sử dụng **Windows API (ToolHelp32Snapshot)** để tương tác trực tiếp với hệ thống.
+
+### 3.5.1. Liệt kê tiến trình – `listProcesses()`
+
+**Mục tiêu:**
+Trả về danh sách tất cả tiến trình hiện đang chạy trên máy, dưới dạng JSON Array.
+
+**Cơ chế hoạt động:**
+1. Sử dụng `CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS)` để tạo snapshot của toàn bộ process.
+2. Duyệt từng process bằng:
+    * `Process32First()`
+    * `Process32Next()`
+3. Mỗi tiến trình được đưa vào một JSON object gồm:
+    * `PID`: mã định danh tiến trình.
+    * `Process Name`: tên file executable (ví dụ: `chrome.exe`, `explorer.exe`).
+4. Trả về JSON Array của tất cả tiến trình.
+
+**Đặc điểm quan trọng:**
+* Hàm trả về mảng rỗng nếu snapshot lỗi.
+* Không truy cập Memory thông qua HANDLE của tiến trình → tránh crash.
+
+### 3.5.2. Kết thúc tiến trình – `killProcessByID(int pid)`
+
+**Mục tiêu:**
+Dừng một tiến trình đang chạy dựa vào PID.
+
+**Cơ chế hoạt động:**
+1. Mở tiến trình bằng Windows API:
+    ```cpp
+    OpenProcess(PROCESS_TERMINATE, FALSE, pid);
+    ```
+2. Gọi `TerminateProcess()`.
+3. Đóng handle.
+
+**Điểm cần lưu ý:**
+* Hàm trả về `false` nếu không thể mở tiến trình (thường do không đủ quyền).
+* Một số tiến trình hệ thống sẽ không thể bị terminate.
+
+### 3.5.3. Tìm PID theo tên tiến trình – `getProcessPIDByName()`
+
+**Mục tiêu:**
+Tìm một tiến trình bất kỳ có tên khớp với chuỗi đầu vào.
+
+**Phương pháp:**
+1. Chuyển input và tên tiến trình trong hệ thống về dạng chữ thường.
+2. So sánh bằng `string::find()`:
+    * Cho phép tìm theo từ khóa.
+    * Ví dụ: nhập "chrome" có thể bắt được "chrome.exe".
+
+**Ứng dụng:**
+Cho phép Client gửi lệnh dạng:
+```json
+{ 
+  "command": "stop_process", 
+  "payload": { "name": "chrome" } 
+}
+```
+Server tự động tìm PID và kill process.
+
+### 3.5.4. Đánh giá hiệu năng & ưu điểm
+
+| Tính năng | Ưu điểm | Ghi chú |
+| :--- | :--- | :--- |
+| **Liệt kê tiến trình** | Nhanh, không block, độ ổn định cao | Windows API native |
+| **Kill tiến trình** | Đơn giản, hiệu quả | Yêu cầu quyền Administrator với một số PID |
+| **Tìm PID theo tên** | Hỗ trợ tìm gần đúng (substring) | Dừng khi gặp tiến trình đầu tiên |
+
+### 3.5.5. Kết luận
+Module `processes.cpp` cung cấp đầy đủ các chức năng cần thiết cho quản lý tiến trình:
+1. Liệt kê toàn bộ process.
+2. Tìm tiến trình theo tên.
+3. Kết thúc tiến trình theo PID.
+
+Thiết kế đơn giản, trực tiếp, và phù hợp với yêu cầu vận hành trên Windows cho hệ thống điều khiển từ xa (remote management).
+
+## 3.6. Module Screenshot (screenshot.cpp)
+
+Module `screenshot.cpp` đảm nhiệm chức năng chụp toàn bộ màn hình máy tính và lưu lại dưới dạng file ảnh JPEG. Chức năng này được sử dụng trong hệ thống điều khiển từ xa để cho phép Client theo dõi trạng thái màn hình của máy chủ.
+
+### 3.6.1. Mục tiêu
+* Chụp ảnh màn hình đa màn hình (multi-monitor) hoặc màn hình ảo (virtual screen).
+* Xuất ảnh sang định dạng `.jpg`.
+* Trả về đường dẫn ảnh để Server gửi lại cho Client.
+
+### 3.6.2. Quy trình chụp màn hình
+Hàm `captureScreen()` thực hiện các bước sau:
+
+**Bước 1 — Xử lý DPI**
+```cpp
+SetProcessDPIAware();
+```
+Giúp chương trình lấy đúng độ phân giải thật của màn hình, tránh hiện tượng scale 125%, 150% làm ảnh bị lệch.
+
+**Bước 2 — Lấy thông tin Virtual Screen**
+Sử dụng Windows API:
+* `SM_XVIRTUALSCREEN` – tọa độ X của màn hình ảo
+* `SM_YVIRTUALSCREEN` – tọa độ Y
+* `SM_CXVIRTUALSCREEN` – tổng chiều rộng
+* `SM_CYVIRTUALSCREEN` – tổng chiều cao
+
+Điều này giúp module hỗ trợ đa màn hình.
+
+**Bước 3 — Tạo Bitmap qua GDI**
+* Lấy Device Context (DC) của toàn màn hình.
+* Tạo bộ nhớ đệm (MemoryDC) để chứa ảnh.
+* Dùng `BitBlt()` để sao chép toàn bộ pixel từ màn hình sang bitmap.
+
+*Ưu điểm:*
+* Nhanh, ổn định.
+* Không yêu cầu quyền cao.
+* Hoạt động tốt trên mọi bản Windows.
+
+**Bước 4 — Chuyển đổi sang OpenCV Mat**
+Bitmap thu được cần convert sang định dạng OpenCV để có thể lưu thành file:
+* Khai báo `BITMAPINFOHEADER` với định dạng 24-bit BGR.
+* Dùng `GetDIBits()` để lấy toàn bộ pixel vào `cv::Mat`.
+
+> **Lưu ý:** `biHeight = -height` giúp ảnh không bị đảo ngược theo trục Y.
+
+**Bước 5 — Lưu file ảnh**
+```cpp
+imwrite("captures/screenshot.jpg", mat);
+```
+* Tự động tạo thư mục `captures` nếu chưa tồn tại.
+* Lưu file ở dạng `.jpg`.
+
+*Kết quả trả về:*
+* `"/captures/screenshot.jpg"` nếu lưu thành công.
+* `""` nếu thất bại.
+
+### 3.6.3. Ưu điểm thiết kế
+
+| Đặc điểm | Mô tả |
+| :--- | :--- |
+| **Hỗ trợ đa màn hình** | Chụp toàn bộ vùng màn hình ảo |
+| **DPI aware** | Ảnh không bị scaling sai khi hệ thống phóng to |
+| **Kết hợp GDI + OpenCV** | Vừa hiệu suất (GDI), vừa hiện đại (OpenCV) |
+| **File đầu ra chuẩn** | JPEG nhẹ, dễ truyền qua WebSocket |
+
+### 3.6.4. Ứng dụng trong hệ thống
+Module screenshot được Server sử dụng khi nhận các lệnh:
+
+```json
+{
+  "command": "screen_capture"
+}
+```
+Server trả về đường dẫn file ảnh để Client hiển thị hoặc tải xuống.
+
+### 3.6.5. Kết luận
+Module screenshot được xây dựng tối ưu cho môi trường Windows, kết hợp cả GDI để trích xuất pixel và OpenCV để xử lý ảnh. Kết quả là một cơ chế chụp màn hình:
+* Nhanh,
+* Chính xác độ phân giải,
+* Hỗ trợ đa màn hình,
+* Dễ dàng tích hợp với kiến trúc WebSocket của Server.
+
 # Phần 4: QUẢN LÝ LỖI & TỐI ƯU HÓA
 
 ## 4.1. **Chiến lược:** 
