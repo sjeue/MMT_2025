@@ -7,7 +7,9 @@
 #include <algorithm>
 #include <iostream>
 #include <filesystem>
-
+#include <propsys.h> // Để dùng IPropertyStore
+#include <propkey.h> // Để dùng PKEY_AppUserModel_ID
+#pragma comment(lib, "propsys.lib") // Link thư viện
 using json = nlohmann::json;
 namespace fs = std::filesystem;
 
@@ -189,84 +191,96 @@ struct UwpItem {
     std::wstring displayName;
     std::wstring appUserModelID;
 };
-std::vector<UwpItem> GetAllUwpApps() {
-    std::vector<UwpItem> list;
+// =====================================================================
+// UWP WORKER - QUÉT APP TRÊN LUỒNG RIÊNG (TRÁNH LỖI COM/NETWORK)
+// =====================================================================
+#include <thread>
+#include <mutex>
+#include <atomic>
+
+// Hàm nội bộ: Thực hiện quét trong môi trường an toàn
+void FindUwpAppWorker(std::wstring keyword, std::wstring* outAumid) {
+    HRESULT hrInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 
     IShellItem* pAppsFolder = nullptr;
+    // Lấy folder chứa Apps
     HRESULT hr = SHGetKnownFolderItem(FOLDERID_AppsFolder, KF_FLAG_DEFAULT, NULL, IID_PPV_ARGS(&pAppsFolder));
-    if (FAILED(hr)) return list;
 
-    IEnumShellItems* pEnum = nullptr;
-    hr = pAppsFolder->BindToHandler(NULL, BHID_EnumItems, IID_PPV_ARGS(&pEnum));
-    if (FAILED(hr)) {
-        pAppsFolder->Release();
-        return list;
-    }
+    if (SUCCEEDED(hr)) {
+        IEnumShellItems* pEnum = nullptr;
+        hr = pAppsFolder->BindToHandler(NULL, BHID_EnumItems, IID_PPV_ARGS(&pEnum));
 
-    IShellItem* pItem = nullptr;
-    ULONG fetched = 0;
+        if (SUCCEEDED(hr)) {
+            IShellItem* pItem = nullptr;
+            ULONG fetched = 0;
+            std::wstring keyNorm = NormalizeKey(ToLowerW(keyword));
 
-    while (pEnum->Next(1, &pItem, &fetched) == S_OK) {
+            while (pEnum->Next(1, &pItem, &fetched) == S_OK) {
+                // 1. Lấy Tên hiển thị (Display Name) để so sánh
+                LPWSTR pszName = nullptr;
+                if (SUCCEEDED(pItem->GetDisplayName(SIGDN_NORMALDISPLAY, &pszName))) {
+                    std::wstring displayName = pszName;
+                    std::wstring displayNorm = NormalizeKey(ToLowerW(displayName));
+                    CoTaskMemFree(pszName);
 
-        UwpItem app;
+                    // 2. Nếu tên khớp với từ khóa
+                    if (displayNorm.find(keyNorm) != std::wstring::npos) {
+                        
+                        // --- SỬA LỖI TẠI ĐÂY: Dùng Property Store để lấy ID chuẩn ---
+                        IPropertyStore* pStore = nullptr;
+                        // Hỏi xin Property Store của item này
+                        if (SUCCEEDED(pItem->BindToHandler(NULL, BHID_PropertyStore, IID_PPV_ARGS(&pStore)))) {
+                            PROPVARIANT pv;
+                            PropVariantInit(&pv);
 
-        // Display Name
-        LPWSTR pszName = nullptr;
-        if (SUCCEEDED(pItem->GetDisplayName(SIGDN_NORMALDISPLAY, &pszName))) {
-            app.displayName = pszName;
-            CoTaskMemFree(pszName);
-        }
+                            // Lấy giá trị PKEY_AppUserModel_ID (Đây là ID chuẩn để mở app)
+                            if (SUCCEEDED(pStore->GetValue(PKEY_AppUserModel_ID, &pv))) {
+                                if (pv.vt == VT_LPWSTR && pv.pwszVal != nullptr) {
+                                    *outAumid = pv.pwszVal; // Gán ID tìm được
+                                }
+                                PropVariantClear(&pv);
+                            }
+                            pStore->Release();
+                        }
+                        // -----------------------------------------------------------
 
-        // AppUserModelID (parsing name)
-        LPWSTR pszParse = nullptr;
-        if (SUCCEEDED(pItem->GetDisplayName(SIGDN_DESKTOPABSOLUTEPARSING, &pszParse))) {
-            std::wstring fullPath = pszParse;
-            CoTaskMemFree(pszParse);
-
-            size_t pos = fullPath.find(L"shell:AppsFolder\\");
-            if (pos != std::wstring::npos) {
-                app.appUserModelID = fullPath.substr(pos + 17);
-                list.push_back(app);
-                std::wcout << L"[UWP] " << app.displayName << L"  ->  " << app.appUserModelID << std::endl;
-
+                        // Nếu đã tìm thấy ID thì thoát vòng lặp ngay
+                        if (!outAumid->empty()) {
+                            pItem->Release();
+                            break; 
+                        }
+                    }
+                }
+                pItem->Release();
             }
+            pEnum->Release();
         }
-        pItem->Release();
+        pAppsFolder->Release();
     }
 
-    pEnum->Release();
-    pAppsFolder->Release();
-    return list;
+    if (SUCCEEDED(hrInit)) CoUninitialize();
 }
+
 bool StartUwpByName(const std::wstring& keywordW) {
-    auto apps = GetAllUwpApps();
-    std::wstring keyLower = ToLowerW(keywordW);
+    std::wstring foundAumid = L"";
+    
+    // --- TẠO LUỒNG RIÊNG ĐỂ QUÉT ---
+    // Việc này đảm bảo CoInitialize không bị lỗi do luồng mạng gây ra
+    std::thread t(FindUwpAppWorker, keywordW, &foundAumid);
+    
+    if (t.joinable()) t.join(); // Chờ luồng quét xong
 
-    for (auto& app : apps) {
-        std::wstring appNameLower = ToLowerW(app.displayName);
+    // Nếu tìm thấy ID
+    if (!foundAumid.empty()) {
+        std::wstring appUri = L"shell:AppsFolder\\" + foundAumid;
+        
+        // Debug
+        // std::wcout << L"[UWP OPEN] " << appUri << std::endl;
 
-        // Tìm tên hiển thị
-        if (
-    NormalizeKey(appNameLower).find(NormalizeKey(keyLower)) != std::wstring::npos ||
-    ToLowerW(app.appUserModelID).find(keyLower) != std::wstring::npos
-) {
-
-
-            // CHỈNH Ở ĐÂY — gọi trực tiếp App URI
-            std::wstring appUri = L"shell:AppsFolder\\" + app.appUserModelID;
-
-            HINSTANCE h = ShellExecuteW(
-                NULL,
-                L"open",
-                appUri.c_str(),   // target = chính appUri
-                NULL,
-                NULL,
-                SW_SHOWNORMAL
-            );
-
-            return ((intptr_t)h > 32);
-        }
+        HINSTANCE h = ShellExecuteW(NULL, L"open", appUri.c_str(), NULL, NULL, SW_SHOWNORMAL);
+        return ((intptr_t)h > 32);
     }
+
     return false;
 }
 
@@ -283,14 +297,14 @@ bool startApp(const std::string& appName) {
     HINSTANCE r = ShellExecuteW(NULL, L"open", wApp.c_str(), NULL, NULL, SW_SHOWNORMAL);
     if ((intptr_t)r > 32) return true;
 
-    // 2. .lnk
+    // 2. .lnk (Shortcut)
     std::wstring shortcut = FindShortcutPath(wApp);
     if (!shortcut.empty()) {
         HINSTANCE r2 = ShellExecuteW(NULL, L"open", shortcut.c_str(), NULL, NULL, SW_SHOWNORMAL);
         if ((intptr_t)r2 > 32) return true;
     }
 
-    // 3. UWP
+    // 3. UWP (Universal App) - Giờ đã hoạt động ổn định
     if (StartUwpByName(wApp)) return true;
 
     std::cout << "[ERROR] Không tìm thấy ứng dụng: " << appName << std::endl;
