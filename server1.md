@@ -273,31 +273,34 @@ Khi người dùng muốn mở ứng dụng nhưng không biết đường dẫn
 * Nhập: `spotify` → tìm `Spotify.lnk`
 * Nhập: `vs` → tìm `Visual Studio 2022.lnk`
 
-### 3.4.6. Quét và Khởi chạy ứng dụng UWP (Microsoft Store)
-Ứng dụng UWP không có file `.exe`. Do đó module phải thao tác qua thư mục đặc biệt **AppsFolder**.
+### 3.4.6. Khởi chạy ứng dụng UWP
 
-**Danh sách UWP — `GetAllUwpApps()`**
-Dùng API:
-* `SHGetKnownFolderItem(FOLDERID_AppsFolder)`
-* `IEnumShellItems`
-* `GetDisplayName()`
+#### a) Tại sao cần xử lý riêng?
+Ứng dụng UWP không có file `.exe`. Chúng chỉ có **AppUserModelID**, được Windows lưu trong thư mục đặc biệt:
+`FOLDERID_AppsFolder`
 
-Mỗi ứng dụng thu được gồm:
-* **Display Name:** Tên hiển thị.
-* **AppUserModelID:** Định danh nội bộ (ví dụ: `Microsoft.WindowsCalculator_8wekyb3d8bbwe!App`).
+#### b). Quy trình mở ứng dụng UWP
+1. Tạo luồng riêng (tránh lỗi COM).
+2. Dùng Shell API để duyệt toàn bộ UWP apps.
+3. Lấy `DisplayName` để so sánh.
+4. Lấy `AppUserModelID` từ property: `PKEY_AppUserModel_ID`.
+5. Mở app bằng lệnh:
+    ```cpp
+    shell:AppsFolder\<AppUserModelID>
+    ```
 
-**Khởi chạy UWP — `StartUwpByName()`**
-Module thực hiện:
-1. So sánh tên ứng dụng (lowercase + bỏ dấu).
-2. Nếu khớp, gọi:
-   ```cpp
-   ShellExecuteW("shell:AppsFolder\<AppUserModelID>")
-   ```
+#### c) Hàm Worker
+`FindUwpAppWorker()` chịu trách nhiệm:
+* Khởi tạo COM (`CoInitializeEx`).
+* Duyệt `AppsFolder`.
+* So khớp keyword.
+* Lấy ra `AppUserModelID`.
 
-**Ví dụ:**
-* Nhập "calculator" → mở ứng dụng Máy tính.
-* Nhập "photos" → mở ứng dụng Ảnh.
-* *Không cần quyền admin.*
+#### d) Hàm mở UWP
+`StartUwpByName()`:
+* Gọi thread worker.
+* Nếu tìm thấy ID thì mở bằng `ShellExecuteW`.
+* Trả về `true` hoặc `false`.
 
 ### 3.4.7. Cơ chế mở ứng dụng tổng hợp — `startApp()`
 Đây là hàm trung tâm với thứ tự ưu tiên:
@@ -311,8 +314,9 @@ Nếu tên ứng dụng trùng với file exe trong PATH → mở ngay.
 **Bước 2: Mở bằng shortcut (.lnk)**
 Dùng `FindShortcutPath()`. Nếu tìm thấy → `ShellExecuteW(open, shortcutPath)`.
 
-**Bước 3: Mở UWP**
-Nếu không có `.exe` hoặc `.lnk` → fallback sang UWP.
+**Bước 3:Ứng dụng UWP**
+* Tìm `AppUserModelID`.
+ * Mở bằng `shell:AppsFolder\<ID>`.
 
 **Kết luận:**
 Hàm trả về:
