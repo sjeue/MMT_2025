@@ -3,46 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Command Center | AI Control</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <title>Trung Tâm Điều Hành | Xuân Bính Ngọ 2026</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="bg-animation"></div>
+    <div class="falling-flowers">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+    </div>
 
-    <div id="login-view" class="dashboard glass-panel">
+    <div class="tet-decor-container">
+        
+        <svg class="svg-decor pos-top-left" viewBox="0 0 200 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0 0 C50 80, 120 40, 180 100" stroke="#5D4037" stroke-width="4" stroke-linecap="round"/>
+            <path d="M50 40 C70 60, 40 100, 20 120" stroke="#5D4037" stroke-width="3" stroke-linecap="round"/>
+            <g fill="#FBBF24">
+                <circle cx="50" cy="40" r="8" /> <circle cx="45" cy="35" r="5" fill="#FEF3C7"/>
+                <circle cx="120" cy="40" r="10"/> <circle cx="115" cy="35" r="6" fill="#FEF3C7"/>
+                <circle cx="180" cy="100" r="9"/> <circle cx="175" cy="95" r="5" fill="#FEF3C7"/>
+                <circle cx="20" cy="120" r="7"/> <circle cx="90" cy="80" r="8"/>
+            </g>
+            <line x1="120" y1="40" x2="120" y2="70" stroke="#FCD34D" stroke-width="1"/>
+            <rect x="110" y="70" width="20" height="25" rx="5" fill="#DC2626"/>
+            <path d="M110 95 L115 110 M130 95 L125 110" stroke="#FCD34D" stroke-width="1"/>
+        </svg>
+
+        <svg class="svg-decor pos-top-right" viewBox="0 0 200 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0 0 C50 80, 120 40, 180 100" stroke="#5D4037" stroke-width="4" stroke-linecap="round"/>
+            <path d="M50 40 C70 60, 40 100, 20 120" stroke="#5D4037" stroke-width="3" stroke-linecap="round"/>
+            <g fill="#F472B6">
+                <circle cx="50" cy="40" r="9"/> <circle cx="50" cy="40" r="3" fill="#FCE7F3"/>
+                <circle cx="120" cy="40" r="11"/> <circle cx="180" cy="100" r="8"/>
+                <circle cx="20" cy="120" r="7"/> <circle cx="90" cy="80" r="10"/>
+            </g>
+            <line x1="90" y1="80" x2="90" y2="110" stroke="#FCD34D" stroke-width="1"/>
+            <rect x="80" y="110" width="20" height="25" rx="5" fill="#DC2626"/>
+            <path d="M80 135 L85 150 M100 135 L95 150" stroke="#FCD34D" stroke-width="1"/>
+        </svg>
+
+        <svg class="svg-decor pos-bottom-left" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <rect x="10" y="20" width="80" height="70" rx="5" fill="#15803D" stroke="#14532D" stroke-width="2"/>
+            <line x1="10" y1="55" x2="90" y2="55" stroke="#FCD34D" stroke-width="4" opacity="0.8"/>
+            <line x1="50" y1="20" x2="50" y2="90" stroke="#FCD34D" stroke-width="4" opacity="0.8"/>
+            <path d="M15 25 L45 25 L45 50 L15 50 Z" fill="#22C55E" opacity="0.3"/>
+            <path d="M55 55 L85 55 L85 85 L55 85 Z" fill="#22C55E" opacity="0.3"/>
+        </svg>
+
+        <svg class="svg-decor pos-bottom-right" viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 50 A 50 50 0 0 0 110 50 Z" fill="#EF4444" stroke="#064E3B" stroke-width="3"/>
+            <path d="M10 50 A 50 50 0 0 0 110 50" fill="none" stroke="#10B981" stroke-width="8"/>
+            <g fill="#000">
+                <ellipse cx="40" cy="65" rx="2" ry="4" transform="rotate(20)"/>
+                <ellipse cx="60" cy="75" rx="2" ry="4"/>
+                <ellipse cx="80" cy="65" rx="2" ry="4" transform="rotate(-20)"/>
+            </g>
+            <circle cx="95" cy="85" r="12" fill="#FBBF24" stroke="#B45309" stroke-width="2"/>
+            <rect x="91" y="81" width="8" height="8" fill="none" stroke="#B45309" stroke-width="1"/>
+            <circle cx="20" cy="85" r="10" fill="#FBBF24" stroke="#B45309" stroke-width="2"/>
+            <rect x="17" y="82" width="6" height="6" fill="none" stroke="#B45309" stroke-width="1"/>
+        </svg>
+
+        <svg class="svg-decor pos-bottom-center" viewBox="0 0 200 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="100" cy="90" rx="70" ry="20" fill="#78350F" stroke="#92400E" stroke-width="2"/>
+            <g opacity="0.9">
+                <circle cx="75" cy="65" r="18" fill="#BE123C" /> 
+                <circle cx="125" cy="65" r="18" fill="#B91C1C" /> 
+                <circle cx="35" cy="85" r="14" fill="#D97706" /> 
+                <circle cx="165" cy="85" r="14" fill="#F59E0B" /> 
+                <ellipse cx="100" cy="105" rx="25" ry="15" fill="#92400E"/> 
+            </g>
+            <g>
+                <ellipse cx="100" cy="85" rx="25" ry="10" fill="#FCD34D" stroke="#F59E0B"/>
+                <path d="M95 75 Q 100 65, 105 75" stroke="#FCD34D" stroke-width="2" stroke-linecap="round" opacity="0.6">
+                    <animate attributeName="d" values="M95 75 Q 100 65, 105 75; M95 70 Q 100 80, 105 70; M95 75 Q 100 65, 105 75" dur="3s" repeatCount="indefinite"/>
+                </path>
+                <path d="M100 70 Q 105 60, 110 70" stroke="#FCD34D" stroke-width="2" stroke-linecap="round" opacity="0.4">
+                    <animate attributeName="d" values="M100 70 Q 105 60, 110 70; M100 65 Q 105 75, 110 65; M100 70 Q 105 60, 110 70" dur="4s" repeatCount="indefinite"/>
+                </path>
+            </g>
+            <text x="100" y="118" text-anchor="middle" fill="#FCD34D" font-size="10" font-family="Dancing Script, cursive" font-weight="bold">Tết Đoàn Viên</text>
+        </svg>
+
+    </div>
+
+    <div id="login-view" class="dashboard tet-panel">
         <div class="logo-area">
-            <i class="fa-solid fa-satellite-dish fa-3x pulse-icon"></i>
-            <h1>SYSTEM CONTROL</h1>
-            <p class="subtitle">Secure Remote Administration</p>
+            <i class="fa-solid fa-horse-head fa-3x golden-icon"></i>
+            <h1 class="tet-font">Hệ Thống Quản Trị</h1>
+            <p class="subtitle">Xuân Bính Ngọ 2026 - Mã Đáo Thành Công</p>
         </div>
         
         <div class="connection-settings">
             <div class="input-group">
-                <label><i class="fa-solid fa-server"></i> Server IP</label>
-                <input type="text" id="server-ip" value="127.0.0.1" placeholder="Ex: 192.168.1.10">
+                <label><i class="fa-solid fa-server"></i> Địa chỉ IP (Server)</label>
+                <input type="text" id="server-ip" value="127.0.0.1" placeholder="Nhập IP...">
             </div>
             <div class="input-group">
-                <label><i class="fa-solid fa-network-wired"></i> Port</label>
-                <input type="number" id="server-port" value="9001" placeholder="Ex: 9001">
+                <label><i class="fa-solid fa-network-wired"></i> Cổng (Port)</label>
+                <input type="number" id="server-port" value="9001" placeholder="Nhập Port...">
             </div>
-            <button id="btn-connect" class="btn-glow">
-                <i class="fa-solid fa-bolt"></i> KẾT NỐI
+            <button id="btn-connect" class="btn-tet-primary">
+                <i class="fa-solid fa-scroll"></i> KẾT NỐI KHAI XUÂN
             </button>
         </div>
         
         <div class="status-footer">
             <span id="login-status-light" class="status-dot disconnected"></span>
-            <span id="login-status-text">Ready to connect...</span>
+            <span id="login-status-text">Sẵn sàng kết nối...</span>
         </div>
     </div>
 
-    <div id="control-view" class="dashboard glass-panel wide-dashboard hidden">
+    <div id="control-view" class="dashboard tet-panel wide-dashboard hidden">
         <header class="control-header">
             <div class="header-left">
-                <h2><i class="fa-solid fa-terminal"></i> COMMAND CENTER</h2>
+                <h2 class="tet-font"><i class="fa-solid fa-fan"></i> BẢNG ĐIỀU KHIỂN</h2>
                 <div class="status-badge">
                     <span id="control-status-light" class="status-dot connected"></span>
                     <span id="control-status-text">ONLINE</span>
@@ -52,34 +131,33 @@
         </header>
 
         <div class="control-layout">
-            
             <div class="col-left">
                 <div class="card">
-                    <div class="card-header"><i class="fa-brands fa-windows"></i> Quản lý Ứng dụng</div>
+                    <div class="card-header"><i class="fa-brands fa-windows"></i> Ứng dụng (Apps)</div>
                     <div class="card-body">
-                        <button id="btn-list-apps" class="btn-primary"><i class="fa-solid fa-list"></i> Xem danh sách Apps</button>
+                        <button id="btn-list-apps" class="btn-gold"><i class="fa-solid fa-list"></i> Xem danh sách Apps</button>
                         <div class="action-row">
                             <input type="text" id="app-name-start" placeholder="Tên App (vd: notepad)">
-                            <button id="btn-start-app" class="btn-success"><i class="fa-solid fa-play"></i> Mở</button>
+                            <button id="btn-start-app" class="btn-green"><i class="fa-solid fa-play"></i> Mở</button>
                         </div>
                         <div class="action-row">
                             <input type="text" id="app-pid-stop" placeholder="PID hoặc Tên">
-                            <button id="btn-stop-app" class="btn-danger"><i class="fa-solid fa-xmark"></i> Đóng</button>
+                            <button id="btn-stop-app" class="btn-red"><i class="fa-solid fa-xmark"></i> Đóng</button>
                         </div>
                     </div>
                 </div>
 
                 <div class="card">
-                    <div class="card-header"><i class="fa-solid fa-microchip"></i> Quản lý Tiến trình (Process)</div>
+                    <div class="card-header"><i class="fa-solid fa-microchip"></i> Tiến trình (Process)</div>
                     <div class="card-body">
-                        <button id="btn-list-process" class="btn-primary"><i class="fa-solid fa-list-ol"></i> Xem danh sách Process</button>
+                        <button id="btn-list-process" class="btn-gold"><i class="fa-solid fa-list-ol"></i> Xem danh sách Process</button>
                         <div class="action-row">
                             <input type="text" id="process-name-start" placeholder="Tên process (vd: calc.exe)">
-                            <button id="btn-start-process" class="btn-success"><i class="fa-solid fa-play"></i> Chạy</button>
+                            <button id="btn-start-process" class="btn-green"><i class="fa-solid fa-play"></i> Chạy</button>
                         </div>
                         <div class="action-row">
                             <input type="text" id="process-pid-stop" placeholder="PID hoặc Tên">
-                            <button id="btn-stop-process" class="btn-danger"><i class="fa-solid fa-skull"></i> Diệt</button>
+                            <button id="btn-stop-process" class="btn-red"><i class="fa-solid fa-skull"></i> Diệt</button>
                         </div>
                     </div>
                 </div>
@@ -96,7 +174,7 @@
                             <i class="fa-solid fa-camera fa-2x"></i><br>Chụp Webcam
                         </button>
                     </div>
-                    <div class="card-body" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top:10px;">
+                    <div class="card-body" style="border-top: 1px solid var(--border-color); padding-top:10px;">
                         <div class="action-row">
                             <input type="number" id="webcam-duration" value="5" min="1" placeholder="Giây" style="width: 60px;">
                             <button id="btn-webcam-record" class="btn-warning"><i class="fa-solid fa-video"></i> Quay Video Webcam</button>
@@ -116,15 +194,15 @@
                     <div class="card-header"><i class="fa-solid fa-gears"></i> Hệ thống</div>
                     <div class="card-body">
                         <div class="action-row">
-                            <input type="text" id="message-text" placeholder="Gửi thông báo...">
-                            <button id="btn-send-message" class="btn-primary"><i class="fa-solid fa-paper-plane"></i> Gửi</button>
+                            <input type="text" id="message-text" placeholder="Gửi lời chúc...">
+                            <button id="btn-send-message" class="btn-gold"><i class="fa-solid fa-paper-plane"></i> Gửi tin</button>
                         </div>
                         
                         <button id="btn-restart" class="btn-warning full-width" style="margin-top: 10px;">
                             <i class="fa-solid fa-rotate-right"></i> KHỞI ĐỘNG LẠI (RESTART)
                         </button>
 
-                        <button id="btn-shutdown" class="btn-danger full-width" style="margin-top: 10px;">
+                        <button id="btn-shutdown" class="btn-red full-width" style="margin-top: 10px;">
                             <i class="fa-solid fa-power-off"></i> TẮT MÁY CHỦ TỪ XA
                         </button>
                     </div>
@@ -134,12 +212,12 @@
     </div>
 
     <div id="result-modal" class="modal hidden">
-        <div class="modal-content glass-panel">
+        <div class="modal-content tet-panel">
             <span id="close-modal" class="close-btn">&times;</span>
-            <h2 id="modal-title">Kết quả</h2>
+            <h2 id="modal-title" class="tet-font">Kết quả</h2>
             <div id="modal-body" class="custom-scroll"></div>
             <div id="modal-footer" class="hidden">
-                <a id="download-link" href="#" download class="btn-download"><i class="fa-solid fa-download"></i> Tải xuống</a>
+                <a id="download-link" href="#" download class="btn-download"><i class="fa-solid fa-download"></i> Tải về máy</a>
             </div>
         </div>
     </div>
@@ -147,38 +225,30 @@
     <div id="toast-container"></div>
     
     <div id="templates" class="hidden">
-        
         <div id="tpl-restart">
             <div style="text-align: center; padding: 20px;">
-                <i class="fa-solid fa-rotate-right fa-4x" style="color: var(--accent-orange); margin-bottom: 20px; animation: spin 2s infinite linear;"></i>
-                <h3 style="color: #fff; font-size: 1.2rem; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">Khởi động lại Server?</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 30px; line-height: 1.5;">
-                    Máy tính Server sẽ khởi động lại ngay lập tức.<br>
-                    Kết nối sẽ bị ngắt.
-                </p>
+                <i class="fa-solid fa-rotate-right fa-4x" style="color: var(--accent-gold); margin-bottom: 20px; animation: spin 2s infinite linear;"></i>
+                <h3 class="tet-font" style="color: var(--accent-gold); font-size: 1.5rem;">Khởi động lại Server?</h3>
+                <p style="color: #fff; margin-bottom: 30px;">Hệ thống sẽ khởi động lại để đón năm mới.</p>
                 <div style="display: flex; justify-content: center; gap: 15px;">
-                    <button id="btn-restart-cancel" class="btn-neutral" style="padding: 10px 25px;"><i class="fa-solid fa-xmark"></i> Hủy bỏ</button>
-                    <button id="btn-restart-ok" class="btn-warning" style="padding: 10px 25px; color:#000; box-shadow: 0 0 15px var(--accent-orange);"><i class="fa-solid fa-check"></i> RESTART NGAY</button>
+                    <button id="btn-restart-cancel" class="btn-neutral"><i class="fa-solid fa-xmark"></i> Hủy bỏ</button>
+                    <button id="btn-restart-ok" class="btn-warning"><i class="fa-solid fa-check"></i> XÁC NHẬN</button>
                 </div>
-                <style>@keyframes spin { 100% { -webkit-transform: rotate(360deg); transform:rotate(360deg); } }</style>
+                <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
             </div>
         </div>
 
         <div id="tpl-shutdown">
             <div style="text-align: center; padding: 20px;">
                 <i class="fa-solid fa-triangle-exclamation fa-4x" style="color: var(--accent-red); margin-bottom: 20px; animation: pulse 1s infinite;"></i>
-                <h3 style="color: #fff; font-size: 1.2rem; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">Xác nhận tắt hệ thống?</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 30px; line-height: 1.5;">
-                    Hành động này sẽ tắt nguồn máy tính Server ngay lập tức.<br>
-                    Bạn sẽ mất kết nối hoàn toàn.
-                </p>
+                <h3 class="tet-font" style="color: var(--accent-red); font-size: 1.5rem;">Cảnh Báo Tắt Máy</h3>
+                <p style="color: #fff; margin-bottom: 30px;">Hệ thống sẽ tắt nguồn. Kết nối bị ngắt.</p>
                 <div style="display: flex; justify-content: center; gap: 15px;">
-                    <button id="btn-confirm-cancel" class="btn-neutral" style="padding: 10px 25px;"><i class="fa-solid fa-xmark"></i> Hủy bỏ</button>
-                    <button id="btn-confirm-ok" class="btn-danger" style="padding: 10px 25px; box-shadow: 0 0 15px var(--accent-red);"><i class="fa-solid fa-power-off"></i> TẮT NGAY</button>
+                    <button id="btn-confirm-cancel" class="btn-neutral"><i class="fa-solid fa-xmark"></i> Hủy bỏ</button>
+                    <button id="btn-confirm-ok" class="btn-red"><i class="fa-solid fa-power-off"></i> TẮT NGAY</button>
                 </div>
             </div>
         </div>
-
     </div>
 
     <script src="app.js"></script>

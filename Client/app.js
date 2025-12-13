@@ -32,15 +32,26 @@ function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = 'toast';
     
-    let icon = 'fa-info-circle';
-    let color = 'var(--accent-blue)';
+    // Đổi icon và màu sắc sang style Tết
+    let icon = 'fa-scroll'; // Hình cuộn giấy
+    let color = 'var(--accent-gold)';
     
-    if (type === 'success') { icon = 'fa-check-circle'; color = 'var(--accent-green)'; }
-    if (type === 'error') { icon = 'fa-exclamation-triangle'; color = 'var(--accent-red)'; }
-    if (type === 'warning') { icon = 'fa-bolt'; color = 'var(--accent-orange)'; }
+    if (type === 'success') { 
+        icon = 'fa-check-circle'; 
+        color = 'var(--accent-green)'; // Xanh lộc
+    }
+    if (type === 'error') { 
+        icon = 'fa-fire'; // Lửa
+        color = 'var(--accent-red)'; // Đỏ
+    }
+    if (type === 'warning') { 
+        icon = 'fa-bell'; 
+        color = 'var(--accent-orange)'; // Cam
+    }
 
+    // Border trái màu sắc chỉ định, nhưng text luôn vàng kim
     toast.style.borderLeftColor = color;
-    toast.innerHTML = `<i class="fa-solid ${icon}" style="color:${color}"></i> <span>${message}</span>`;
+    toast.innerHTML = `<i class="fa-solid ${icon}" style="color:${color}"></i> <span style="font-weight:600">${message}</span>`;
     
     container.appendChild(toast);
 
