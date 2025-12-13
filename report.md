@@ -47,8 +47,10 @@ TP. Hồ Chí Minh, Tháng 12/2025
 - [PHẦN 1: KIẾN TRÚC HỆ THỐNG SERVER](#phần-1-kiến-trúc-hệ-thống-server)
   - [1.1. Mô hình Asynchronous Event-Loop](#11-mô-hình-asynchronous-event-loop)
     - [1.2. Phân tích cơ chế hoạt đông](#12-phân-tích-cơ-chế-hoạt-đông)
-      - [1.2.1. Quản lý vòng đời kết nối](#121-quản-lý-vòng-đời-kết-nối)
-      - [1.2.2. Phân Hệ WebSocket](#122-phân-hệ-websocket)
+      - [1.2.1. Tổng quan Workflow của Server](#121-tổng-quan-workflow-của-server)
+      - [1.2.2. Quản lý vòng đời kết nối](#122-quản-lý-vòng-đời-kết-nối)
+      - [1.2.3. Phân Hệ WebSocket](#123-phân-hệ-websocket)
+      - [1.2.4. Handle HTTP Request](#124-handle-http-request)
 - [PHẦN 2: GIAO THỨC GIAO TIẾP (PROTOCOL)](#phần-2-giao-thức-giao-tiếp-protocol)
 - [PHẦN 3: PHÂN TÍCH CHI TIẾT MODULES CHỨC NĂNG](#phần-3-phân-tích-chi-tiết-modules-chức-năng)
   - [3.1. Module điều khiển nguồn (`control.cpp`)](#31-module-điều-khiển-nguồn-controlcpp)
@@ -104,7 +106,48 @@ Hệ thống Server được xây dựng theo mô hình **Asynchronous I/O (Bấ
 Server hoạt động đa luồng (Multi-threading) dựa trên số lõi CPU của phần cứng, đảm bảo hiệu năng cao khi chịu tải.
 ### 1.2. Phân tích cơ chế hoạt đông
 
-#### 1.2.1. Quản lý vòng đời kết nối
+#### 1.2.1. Tổng quan Workflow của Server
+Để hình dung trực quan, hãy xem xét quy trình xử lý từ lúc Server khởi động đến khi tiếp nhận yêu cầu:
+
+**Giai đoạn 1: Khởi động (Initialization)**
+1. Hàm `main` tạo `io_context` và khởi chạy `Listener` tại port **9001**.
+2. Server rơi vào trạng thái Idle, không tiêu tốn CPU nhờ cơ chế bất đồng bộ.
+
+**Giai đoạn 2: Tiếp nhận và Phân loại (The Fork)**
+
+Khi có một Client kết nối đến:
+1. `Listener` chấp nhận kết nối TCP.
+2. `Listener` đọc Header của gói tin đầu tiên.
+
+**Kịch bản A: Client muốn xem ảnh/video (HTTP Mode)**
+* **Listener:** Nhận thấy đây là phương thức `GET`.
+* **Action:** Gọi hàm `handle_http_file_request`.
+* **Server:** Tìm file trong thư mục `/captures/`, đọc binary, đóng gói HTTP Response (kèm Content-Type phù hợp: image/png, video/mp4...).
+* **Kết thúc:** Gửi dữ liệu và đóng kết nối ngay lập tức. Socket được giải phóng.
+
+**Kịch bản B: Client muốn điều khiển (WebSocket Mode)**
+
+* **Listener:** Nhận thấy Header có `Upgrade: websocket`.
+
+* **Check:** Kiểm tra biến `active_ws_session_`.
+
+    * *Nếu đang bận:* Trả về `HTTP 503` "Server Busy".
+
+    * *Nếu rảnh:* Tạo mới `WebsocketSession`.
+
+* **WebsocketSession:**
+
+    * Hoàn tất **Handshake**.
+
+    * Mở kênh giao tiếp 2 chiều.
+
+    * Chờ lệnh JSON từ Client (ví dụ: `{"command": "screenshot"}`).
+
+    * Gửi kết quả trả về Client thông qua hàng đợi gửi (`queue_`).
+
+    * Kết nối được duy trì liên tục cho đến khi một bên chủ động ngắt hoặc timeout.
+
+#### 1.2.2. Quản lý vòng đời kết nối
 Class `Listener` đóng vai trò là "người gác cổng". Đây là điểm tiếp nhận đầu tiên của mọi kết nối mạng. Nhiệm vụ của nó không chỉ là chấp nhận kết nối mà còn phải phân loại giao thức. Quy trình tiếp nhận kết nối diễn ra như sau:
 
 1. **Khởi tạo Socket:** **Server** thiết lập kết nối với **Socket** qua 2 hàm sau trong class `Listener`.
@@ -128,10 +171,10 @@ Class `Listener` đóng vai trò là "người gác cổng". Đây là điểm t
 
             * *Lưu ý*: Server áp dụng chính sách Single-Client. Nếu đã có một session WebSocket đang chạy, server sẽ từ chối kết nối mới (trả về lỗi 503) để đảm bảo tính độc quyền điều khiển.
 
-        * **Trường hợp 2 (HTTP Request):** Nếu là yêu cầu HTTP thông thường (GET file ảnh, video...), nó gọi hàm `handle_http_file_request` để trả file và đóng kết nối ngay lập tức (Stateless).
+        * **Trường hợp 2 (HTTP Request):** Nếu là yêu cầu HTTP thông thường (`GET` file ảnh, video...), nó gọi hàm `handle_http_file_request` để trả file và đóng kết nối ngay lập tức (Stateless).
 
 
-#### 1.2.2. Phân Hệ WebSocket
+#### 1.2.3. Phân Hệ WebSocket
 Đây là "trái tim" của hệ thống, nơi chịu trách nhiệm duy trì kết nối bền vững (persistent connection) để điều khiển và nhận lệnh từ Client.
 
 **Nhóm hàm khởi tạo kết nối, thiết lập môi trường và dọn dẹp:**
@@ -204,6 +247,76 @@ Class `Listener` đóng vai trò là "người gác cổng". Đây là điểm t
 
     * Cơ chế này tạo thành một dây chuyền liên tục cho đến khi hàng đợi rỗng.
 
+#### 1.2.4. Handle HTTP Request
+Ở đây ta xử lý yêu cầu HTTP qua hàm `handle_http_file_request`. Hàm hoạt động như một Web Server tĩnh.
+
+##### a) Quy trình kiểm tra hợp lệ & định tuyến
+Đảm bảo Server chỉ trả lời những yêu cầu hợp lệ.
+```c++
+std::string target_str = std::string(req.target()); 
+bool starts_with_captures = target_str.find("/captures/") == 0;
+
+if (req.method() == http::verb::get && starts_with_captures) {
+    file_path_relative = target_str.substr(1); // Bỏ dấu '/' đầu tiên
+}
+```
+* **Bộ lọc Method:** Chỉ chấp nhận `http::verb::get`. Các lệnh `POST`, `PUT`, `DELETE` sẽ bị từ chối ngay lập tức. Điều này ngăn chặn hacker lợi dụng cổng này để upload file độc hại lên server.
+
+* **Bộ lọc Đường dẫn:** Chỉ chấp nhận các request bắt đầu bằng `/captures/`.
+    * **Ý nghĩa:** Server cô lập quyền truy cập. Người dùng không thể truy cập các file hệ thống khác nếu không có tiền tố này.
+
+* **Xử lý Đường dẫn:** `target_str.substr(1)` biến đường dẫn URL (ví dụ: `/captures/img.jpg`) thành đường dẫn tệp tương đối (relative file path: `captures/img.jpg`) để hệ điều hành có thể hiểu và mở được.
+
+##### b) Cơ chế xác định định dạng (MIME Type Detection)
+Trình duyệt cần biết file gửi về là ảnh hay video để chọn cách hiển thị phù hợp.
+```c++
+if (string_ends_with(file_path_relative, ".jpg") || ...) {
+    content_type = "image/jpeg";
+} else if (string_ends_with(file_path_relative, ".mp4")) {
+    content_type = "video/mp4";
+}
+```
+* **Hard-coded Mapping:** Code kiểm tra thủ công đuôi file (`.jpg`, `.png`, `.mp4`).
+
+* **Xử lý lỗi định dạng:** Nếu đuôi file không nằm trong danh sách hỗ trợ, server trả về lỗi `400 Bad Request`. Đây là tính năng bảo mật gián tiếp, ngăn người dùng tải về các file nhạy cảm như `.exe`, `.dll`, hay source code `.cpp` dù chúng có nằm trong thư mục `/captures/`.
+
+##### c) Kiểm tra tồn tại & xử lý lỗi 404 (Existence Check)
+```c++
+std::ifstream file_check(file_path_relative, std::ios::binary | std::ios::ate);
+if (!file_check.is_open()) {
+    // Trả về 404 Not Found
+    return;
+}
+file_check.close();
+```
+* **Ý nghĩa:** Mặc dù hàm mở file chính thức ở bên dưới cũng có thể báo lỗi, nhưng việc dùng `std::ifstream` kiểm tra trước giúp ta trả về một thông điệp lỗi 404 Not Found rõ ràng và chuẩn mực ("User Friendly").
+
+* **Lưu ý hiệu năng:** Việc mở file chỉ để kiểm tra rồi đóng lại (`file_check.close()`) ngay lập tức tốn một lượng nhỏ tài nguyên I/O đĩa. Tuy nhiên với quy mô ứng dụng nhỏ, sự an toàn và rõ ràng được ưu tiên hơn.
+
+##### d) Kỹ thuật "Zero-Copy Streaming"
+```c++
+// 1. Tạo response với body là file
+http::response<http::file_body> res{http::status::ok, req.version()};
+
+// 2. Mở file bằng file_mode::read
+res.body().open(file_path_relative.c_str(), beast::file_mode::read, ec);
+
+// 3. Tính toán độ dài content-length
+res.content_length(res.body().size()); 
+
+// 4. Gửi đi
+http::write(socket, res, ec);
+```
+* `http::file_body`: Đây là cấu trúc dữ liệu đặc biệt. Thay vì đọc toàn bộ nội dung file vào biến `std::string` (gây tràn RAM nếu file nặng vài GB), nó chỉ giữ một cái handle đến file đó trên đĩa cứng.
+
+* **Cơ chế gửi:** Khi gọi `http::write`, `Boost.Beast` sẽ đọc từng (chunk) từ ổ cứng và gửi thẳng ra card mạng (Network Interface Card).
+
+* **Hiệu quả:**
+
+    * **RAM Usage:** Cực thấp và ổn định, bất kể file video nặng 10MB hay 10GB.
+
+    * **Tốc độ:** Tận dụng tối đa băng thông ổ cứng và mạng.
+
 # PHẦN 2: GIAO THỨC GIAO TIẾP (PROTOCOL)
 Giao tiếp hoàn toàn dựa trên **JSON**. Cấu trúc giao tiếp được sử dụng là: 
 * `"command"`: phân loại request của lệnh gì
@@ -254,11 +367,11 @@ Giao tiếp hoàn toàn dựa trên **JSON**. Cấu trúc giao tiếp được s
 
     * Dùng API Windows `GetAsyncKeyState` để quét trạng thái 254 phím.
 
-    * Dùng `LogKey()` để xác định phím nào được bấm, sau đó `AnsiToUtf8()`chuyển phím được bấm thành 1 string **UTF-8** để truyền vào log.
+    * Dùng `LogKey()` để xác định phím nào được bấm, sau đó `AnsiToUtf8()`chuyển phím được bấm thành một string **UTF-8** để truyền vào log.
 
-    * `key_status` để đảm bảo 1 kí tự sẽ không xuất hiện trong log nhiều lần nếu nó bị giữ.
+    * `key_status` để đảm bảo một kí tự sẽ không xuất hiện trong log nhiều lần nếu nó bị giữ.
 
-**Kết quả:** Trả về cho **Client** 1 chuỗi kí tự (string), biểu thị cho các phím bấm được ghi lại.
+**Kết quả:** Trả về cho **Client** một chuỗi kí tự (string), biểu thị cho các phím bấm được ghi lại.
 
 ## 3.3. Module Webcam (`webcam.cpp`)
 
