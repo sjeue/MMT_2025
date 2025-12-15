@@ -56,7 +56,7 @@ TP. Hồ Chí Minh, Tháng 12/2025
   - [3.1. Module điều khiển nguồn (`control.cpp`)](#31-module-điều-khiển-nguồn-controlcpp)
   - [3.2. Module Keylogger (`keylogger.cpp`)](#32-module-keylogger-keyloggercpp)
   - [3.3. Module Webcam (`webcam.cpp`)](#33-module-webcam-webcamcpp)
-  - [3.4. Module Apps (Quản lý và Khởi chạy Ứng dụng Windows)](#34-module-apps-quản-lý-và-khởi-chạy-ứng-dụng-windows)
+  - [3.4. Module Apps (`apps.cpp`)](#34-module-apps-quản-lý-và-khởi-chạy-ứng-dụng-windows)
     - [3.4.1. Chuyển đổi mã hóa UTF-8 ⇆ UTF-16](#341-chuyển-đổi-mã-hóa-utf-8--utf-16)
     - [3.4.2. Liệt kê ứng dụng đang chạy — `listApps()`](#342-liệt-kê-ứng-dụng-đang-chạy--listapps)
     - [3.4.3. Tìm PID theo tên ứng dụng — `getAppPIDByName()`](#343-tìm-pid-theo-tên-ứng-dụng--getapppidbyname)
@@ -69,19 +69,19 @@ TP. Hồ Chí Minh, Tháng 12/2025
       - [d) Hàm mở UWP](#d-hàm-mở-uwp)
     - [3.4.7. Cơ chế mở ứng dụng tổng hợp — `startApp()`](#347-cơ-chế-mở-ứng-dụng-tổng-hợp--startapp)
     - [3.4.8. Ưu điểm của Module Apps](#348-ưu-điểm-của-module-apps)
-  - [3.5. Module Processes (processes.cpp)](#35-module-processes-processescpp)
+  - [3.5. Module Processes (`processes.cpp`)](#35-module-processes-processescpp)
     - [3.5.1. Liệt kê tiến trình – `listProcesses()`](#351-liệt-kê-tiến-trình--listprocesses)
     - [3.5.2. Kết thúc tiến trình – `killProcessByID(int pid)`](#352-kết-thúc-tiến-trình--killprocessbyidint-pid)
     - [3.5.3. Tìm PID theo tên tiến trình – `getProcessPIDByName()`](#353-tìm-pid-theo-tên-tiến-trình--getprocesspidbyname)
     - [3.5.4. Đánh giá hiệu năng \& ưu điểm](#354-đánh-giá-hiệu-năng--ưu-điểm)
     - [3.5.5. Kết luận](#355-kết-luận)
-  - [3.6. Module Screenshot (screenshot.cpp)](#36-module-screenshot-screenshotcpp)
+  - [3.6. Module Screenshot (`screenshot.cpp`)](#36-module-screenshot-screenshotcpp)
     - [3.6.1. Mục tiêu](#361-mục-tiêu)
     - [3.6.2. Quy trình chụp màn hình](#362-quy-trình-chụp-màn-hình)
     - [3.6.3. Ưu điểm thiết kế](#363-ưu-điểm-thiết-kế)
     - [3.6.4. Ứng dụng trong hệ thống](#364-ứng-dụng-trong-hệ-thống)
     - [3.6.5. Kết luận](#365-kết-luận)
-- [Phần 5: QUẢN LÝ LỖI \& TỐI ƯU HÓA](#phần-5-quản-lý-lỗi--tối-ưu-hóa)
+- [Phần 4: QUẢN LÝ LỖI \& TỐI ƯU HÓA](#phần-4-quản-lý-lỗi--tối-ưu-hóa)
   - [4.1. **Chiến lược:**](#41-chiến-lược)
     - [4.1.1. Tầng Mạng \& Giao thức (Network Layer)](#411-tầng-mạng--giao-thức-network-layer)
     - [4.1.2. Tầng Ứng dụng \& Dữ liệu (Application Layer)](#412-tầng-ứng-dụng--dữ-liệu-application-layer)
@@ -104,7 +104,7 @@ TP. Hồ Chí Minh, Tháng 12/2025
 Hệ thống Server được xây dựng theo mô hình **Asynchronous I/O (Bất đồng bộ)** sử dụng thư viện `Boost.Asio`, cho phép xử lý đồng thời nhiều kết nối mạng mà không bị tắc nghẽn (non-blocking). Điểm đặc biệt của Server này là khả năng **Hybrid Protocol Handling**: nó có thể xử lý cả giao thức **HTTP** (để tải file) và **WebSocket** (để điều khiển thời gian thực) trên cùng một cổng duy nhất (Port `9001`).
 
 Server hoạt động đa luồng (Multi-threading) dựa trên số lõi CPU của phần cứng, đảm bảo hiệu năng cao khi chịu tải.
-### 1.2. Phân tích cơ chế hoạt đông
+### 1.2. Phân tích cơ chế hoạt động
 
 #### 1.2.1. Tổng quan Workflow của Server
 Để hình dung trực quan, hãy xem xét quy trình xử lý từ lúc Server khởi động đến khi tiếp nhận yêu cầu:
@@ -367,7 +367,7 @@ Giao tiếp hoàn toàn dựa trên **JSON**. Cấu trúc giao tiếp được s
 
     * Dùng API Windows `GetAsyncKeyState` để quét trạng thái 254 phím.
 
-    * Dùng `LogKey()` để xác định phím nào được bấm, sau đó `AnsiToUtf8()`chuyển phím được bấm thành một string **UTF-8** để truyền vào log.
+    * Dùng `LogKey()` để xác định phím nào được bấm, sau đó `AnsiToUtf8()` chuyển phím được bấm thành một string **UTF-8** để truyền vào log.
 
     * `key_status` để đảm bảo một kí tự sẽ không xuất hiện trong log nhiều lần nếu nó bị giữ.
 
@@ -386,7 +386,7 @@ Giao tiếp hoàn toàn dựa trên **JSON**. Cấu trúc giao tiếp được s
 
 **Kết quả:** Trả về cho **Client** đường dẫn tương đối với file `.exe` của **Server** (`/captures/anh_chup.jpg` cho ảnh, và `/captures/video_recording.mp4` cho video)
 
-## 3.4. Module Apps (Quản lý và Khởi chạy Ứng dụng Windows)
+## 3.4. Module Apps (`apps.cpp`)
 
 Module Apps đóng vai trò cung cấp toàn bộ khả năng tương tác với ứng dụng trên Windows, bao gồm:
 
@@ -489,7 +489,7 @@ Khi người dùng muốn mở ứng dụng nhưng không biết đường dẫn
 Ứng dụng UWP không có file `.exe`. Chúng chỉ có **AppUserModelID**, được Windows lưu trong thư mục đặc biệt:
 `FOLDERID_AppsFolder`
 
-#### b). Quy trình mở ứng dụng UWP
+#### b) Quy trình mở ứng dụng UWP
 1. Tạo luồng riêng (tránh lỗi COM).
 2. Dùng Shell API để duyệt toàn bộ UWP apps.
 3. Lấy `DisplayName` để so sánh.
@@ -524,7 +524,7 @@ Nếu tên ứng dụng trùng với file exe trong PATH → mở ngay.
 **Bước 2: Mở bằng shortcut (.lnk)**
 Dùng `FindShortcutPath()`. Nếu tìm thấy → `ShellExecuteW(open, shortcutPath)`.
 
-**Bước 3:Ứng dụng UWP**
+**Bước 3: Ứng dụng UWP**
 * Tìm `AppUserModelID`.
  * Mở bằng `shell:AppsFolder\<ID>`.
 
@@ -543,7 +543,7 @@ Hàm trả về:
 | **Native Windows API** | Tương thích mọi phiên bản Windows |
 | **Đa dạng đầu vào** | Người dùng có thể nhập tên bất kỳ để tìm |
 
-## 3.5. Module Processes (processes.cpp)
+## 3.5. Module Processes (`processes.cpp`)
 
 Module `processes.cpp` chịu trách nhiệm quản lý tiến trình hệ thống Windows, bao gồm:
 
@@ -626,7 +626,7 @@ Module `processes.cpp` cung cấp đầy đủ các chức năng cần thiết c
 
 Thiết kế đơn giản, trực tiếp, và phù hợp với yêu cầu vận hành trên Windows cho hệ thống điều khiển từ xa (remote management).
 
-## 3.6. Module Screenshot (screenshot.cpp)
+## 3.6. Module Screenshot (`screenshot.cpp`)
 
 Module `screenshot.cpp` đảm nhiệm chức năng chụp toàn bộ màn hình máy tính và lưu lại dưới dạng file ảnh JPEG. Chức năng này được sử dụng trong hệ thống điều khiển từ xa để cho phép Client theo dõi trạng thái màn hình của máy chủ.
 
@@ -709,7 +709,7 @@ Module screenshot được xây dựng tối ưu cho môi trường Windows, k�
 
 
 
-# Phần 5: QUẢN LÝ LỖI & TỐI ƯU HÓA
+# Phần 4: QUẢN LÝ LỖI & TỐI ƯU HÓA
 
 ## 4.1. **Chiến lược:** 
 
