@@ -46,17 +46,21 @@ TP. Hồ Chí Minh, Tháng 12/2025
 - [**MỤC LỤC**](#mục-lục)
 - [PHẦN 1: KIẾN TRÚC HỆ THỐNG SERVER](#phần-1-kiến-trúc-hệ-thống-server)
   - [1.1. Mô hình Asynchronous Event-Loop](#11-mô-hình-asynchronous-event-loop)
-    - [1.2. Phân tích cơ chế hoạt đông](#12-phân-tích-cơ-chế-hoạt-đông)
+    - [1.2. Phân tích cơ chế hoạt động](#12-phân-tích-cơ-chế-hoạt-động)
       - [1.2.1. Tổng quan Workflow của Server](#121-tổng-quan-workflow-của-server)
       - [1.2.2. Quản lý vòng đời kết nối](#122-quản-lý-vòng-đời-kết-nối)
       - [1.2.3. Phân Hệ WebSocket](#123-phân-hệ-websocket)
       - [1.2.4. Handle HTTP Request](#124-handle-http-request)
+        - [a) Quy trình kiểm tra hợp lệ \& định tuyến](#a-quy-trình-kiểm-tra-hợp-lệ--định-tuyến)
+        - [b) Cơ chế xác định định dạng (MIME Type Detection)](#b-cơ-chế-xác-định-định-dạng-mime-type-detection)
+        - [c) Kiểm tra tồn tại \& xử lý lỗi 404 (Existence Check)](#c-kiểm-tra-tồn-tại--xử-lý-lỗi-404-existence-check)
+        - [d) Kỹ thuật "Zero-Copy Streaming"](#d-kỹ-thuật-zero-copy-streaming)
 - [PHẦN 2: GIAO THỨC GIAO TIẾP (PROTOCOL)](#phần-2-giao-thức-giao-tiếp-protocol)
 - [PHẦN 3: PHÂN TÍCH CHI TIẾT MODULES CHỨC NĂNG](#phần-3-phân-tích-chi-tiết-modules-chức-năng)
   - [3.1. Module điều khiển nguồn (`control.cpp`)](#31-module-điều-khiển-nguồn-controlcpp)
   - [3.2. Module Keylogger (`keylogger.cpp`)](#32-module-keylogger-keyloggercpp)
   - [3.3. Module Webcam (`webcam.cpp`)](#33-module-webcam-webcamcpp)
-  - [3.4. Module Apps (`apps.cpp`)](#34-module-apps-quản-lý-và-khởi-chạy-ứng-dụng-windows)
+  - [3.4. Module Apps (`apps.cpp`)](#34-module-apps-appscpp)
     - [3.4.1. Chuyển đổi mã hóa UTF-8 ⇆ UTF-16](#341-chuyển-đổi-mã-hóa-utf-8--utf-16)
     - [3.4.2. Liệt kê ứng dụng đang chạy — `listApps()`](#342-liệt-kê-ứng-dụng-đang-chạy--listapps)
     - [3.4.3. Tìm PID theo tên ứng dụng — `getAppPIDByName()`](#343-tìm-pid-theo-tên-ứng-dụng--getapppidbyname)
@@ -64,7 +68,7 @@ TP. Hồ Chí Minh, Tháng 12/2025
     - [3.4.5. Smart Search — Tìm Shortcut (.lnk)](#345-smart-search--tìm-shortcut-lnk)
     - [3.4.6. Khởi chạy ứng dụng UWP](#346-khởi-chạy-ứng-dụng-uwp)
       - [a) Tại sao cần xử lý riêng?](#a-tại-sao-cần-xử-lý-riêng)
-      - [b). Quy trình mở ứng dụng UWP](#b-quy-trình-mở-ứng-dụng-uwp)
+      - [b) Quy trình mở ứng dụng UWP](#b-quy-trình-mở-ứng-dụng-uwp)
       - [c) Hàm Worker](#c-hàm-worker)
       - [d) Hàm mở UWP](#d-hàm-mở-uwp)
     - [3.4.7. Cơ chế mở ứng dụng tổng hợp — `startApp()`](#347-cơ-chế-mở-ứng-dụng-tổng-hợp--startapp)
@@ -81,19 +85,30 @@ TP. Hồ Chí Minh, Tháng 12/2025
     - [3.6.3. Ưu điểm thiết kế](#363-ưu-điểm-thiết-kế)
     - [3.6.4. Ứng dụng trong hệ thống](#364-ứng-dụng-trong-hệ-thống)
     - [3.6.5. Kết luận](#365-kết-luận)
-- [Phần 4: QUẢN LÝ LỖI \& TỐI ƯU HÓA](#phần-4-quản-lý-lỗi--tối-ưu-hóa)
-  - [4.1. **Chiến lược:**](#41-chiến-lược)
-    - [4.1.1. Tầng Mạng \& Giao thức (Network Layer)](#411-tầng-mạng--giao-thức-network-layer)
-    - [4.1.2. Tầng Ứng dụng \& Dữ liệu (Application Layer)](#412-tầng-ứng-dụng--dữ-liệu-application-layer)
-    - [4.1.3. Xử lý lỗi File (File System)](#413-xử-lý-lỗi-file-file-system)
-  - [4.2. Các kỹ thuật tối ưu hóa](#42-các-kỹ-thuật-tối-ưu-hóa)
-    - [4.2.1. Truyền tải File hiệu năng cao](#421-truyền-tải-file-hiệu-năng-cao)
-    - [4.2.2. Cơ chế "Strand"](#422-cơ-chế-strand)
-    - [4.2.3. Hàng đợi Gửi](#423-hàng-đợi-gửi)
-- [PHẦN 5: HẠN CHẾ VÀ NÂNG CẤP](#phần-5-hạn-chế-và-nâng-cấp)
-  - [5.1. **Quản lý đa Client**](#51-quản-lý-đa-client)
-  - [5.2 Bảo mật](#52-bảo-mật)
-  - [5.3 Xử lý lỗi JSON](#53-xử-lý-lỗi-json)
+- [PHẦN 4: CLIENT: KIẾN TRÚC \& TRIỂN KHAI](#phần-4-client-kiến-trúc--triển-khai)
+  - [4.1. Kiến trúc tổng quan](#41-kiến-trúc-tổng-quan)
+  - [4.2. Frontend](#42-frontend)
+    - [a) View Quản lý Kết nối (Login View)](#a-view-quản-lý-kết-nối-login-view)
+    - [b) View Điều khiển (Control Panel)](#b-view-điều-khiển-control-panel)
+    - [c) Hệ thống Phản hồi (Feedback System)](#c-hệ-thống-phản-hồi-feedback-system)
+  - [4.3. Backend](#43-backend)
+    - [4.3.1. Cơ chế Socket \& Giao thức Kết nối](#431-cơ-chế-socket--giao-thức-kết-nối)
+    - [4.3.2. Xử lý Giao thức Ứng dụng (Application Protocol)](#432-xử-lý-giao-thức-ứng-dụng-application-protocol)
+    - [4.3.3. Tải tài nguyên (Hybrid Data Handling)](#433-tải-tài-nguyên-hybrid-data-handling)
+  - [4.4. Triển khai](#44-triển-khai)
+- [Phần 5: QUẢN LÝ LỖI \& TỐI ƯU HÓA](#phần-5-quản-lý-lỗi--tối-ưu-hóa)
+  - [5.1. **Chiến lược:**](#51-chiến-lược)
+    - [5.1.1. Tầng Mạng \& Giao thức (Network Layer)](#511-tầng-mạng--giao-thức-network-layer)
+    - [5.1.2. Tầng Ứng dụng \& Dữ liệu (Application Layer)](#512-tầng-ứng-dụng--dữ-liệu-application-layer)
+    - [5.1.3. Xử lý lỗi File (File System)](#513-xử-lý-lỗi-file-file-system)
+  - [5.2. Các kỹ thuật tối ưu hóa](#52-các-kỹ-thuật-tối-ưu-hóa)
+    - [5.2.1. Truyền tải File hiệu năng cao](#521-truyền-tải-file-hiệu-năng-cao)
+    - [5.2.2. Cơ chế "Strand"](#522-cơ-chế-strand)
+    - [5.2.3. Hàng đợi Gửi](#523-hàng-đợi-gửi)
+- [PHẦN 6: HẠN CHẾ VÀ NÂNG CẤP](#phần-6-hạn-chế-và-nâng-cấp)
+  - [6.1. **Quản lý đa Client**](#61-quản-lý-đa-client)
+  - [6.2 Bảo mật](#62-bảo-mật)
+  - [6.3 Xử lý lỗi JSON](#63-xử-lý-lỗi-json)
 
 <div style="page-break-after: always;"></div>
 
@@ -707,15 +722,111 @@ Module screenshot được xây dựng tối ưu cho môi trường Windows, k�
 * Hỗ trợ đa màn hình,
 * Dễ dàng tích hợp với kiến trúc WebSocket của Server.
 
+# PHẦN 4: CLIENT: KIẾN TRÚC & TRIỂN KHAI
 
+## 4.1. Kiến trúc tổng quan 
 
-# Phần 4: QUẢN LÝ LỖI & TỐI ƯU HÓA
+Phần Client của hệ thống được xây dựng dưới dạng một **Single Page Application (SPA)**, đóng vai trò là trạm điều khiển trung tâm (Dashboard). Client không chịu trách nhiệm xử lý logic nghiệp vụ nặng (như chụp ảnh, quét process) mà tập trung vào hai nhiệm vụ chính:
 
-## 4.1. **Chiến lược:** 
+1.  **Gửi lệnh (Command Dispatcher):** Đóng gói yêu cầu người dùng thành định dạng JSON và gửi qua mạng.
+2.  **Trực quan hóa (Data Visualization):** Nhận dữ liệu thô từ Server (danh sách tiến trình, chuỗi keylog, hình ảnh) và hiển thị lên giao diện đồ họa.
+
+**Công nghệ sử dụng:**
+
+  * **HTML5/CSS3:** Xây dựng khung xương và giao diện người dùng. Sử dụng các biến CSS (`:root`) để quản lý theme và `Flexbox/Grid` cho bố cục phản hồi (Responsive Design).
+  * **JavaScript (Vanilla ES6+):** Xử lý logic kết nối, không phụ thuộc vào bất kỳ Framework bên thứ ba nào (như React hay Vue) để đảm bảo tính nhẹ nhàng (lightweight) và dễ dàng nhúng vào bất kỳ trình duyệt nào mà không cần quy trình build phức tạp.
+
+Mô hình tương tác hoạt động theo cơ chế **Event-Driven**: Client luôn ở trạng thái lắng nghe sự kiện từ người dùng (click chuột, nhập liệu) để gửi lệnh, và lắng nghe sự kiện từ Socket để cập nhật giao diện thời gian thực (Real-time).
+
+## 4.2. Frontend
+
+Giao diện được thiết kế theo phong cách **Dashboard (Bảng điều khiển)** hiện đại, với chủ đề, tập trung vào trải nghiệm người dùng (UX) với các thành phần chính:
+
+### a) View Quản lý Kết nối (Login View)
+
+  * Đây là màn hình đầu tiên khi khởi động ứng dụng.
+  * Cung cấp các trường nhập liệu cho **IP Address** và **Port**. Điều này cho phép Client linh hoạt kết nối tới bất kỳ Server nào trong mạng LAN hoặc Internet mà không cần hard-code địa chỉ.
+  * Hiển thị trạng thái kết nối trực quan thông qua các đèn tín hiệu (Status Light).
+
+### b) View Điều khiển (Control Panel)
+
+Được chia thành các thẻ (Card) chức năng riêng biệt, tương ứng với các module phía Server:
+
+  * **Apps & Processes:** Bảng quản lý cho phép xem danh sách, lọc, và gửi lệnh Start/Kill/Stop thông qua PID hoặc tên ứng dụng.
+  * **Giám sát (Monitoring):** Các nút bấm lớn để kích hoạt chụp màn hình và Webcam.
+  * **Keylogger & System:** Khu vực điều khiển ghi phím và các lệnh hệ thống (Shutdown/Restart).
+
+### c) Hệ thống Phản hồi (Feedback System)
+
+Để đảm bảo người dùng biết lệnh đã được thực thi hay chưa, Frontend cài đặt hai cơ chế:
+
+  * **Toast Notification:** Các thông báo nhỏ trượt ra từ góc màn hình (Success, Error, Warning) báo hiệu trạng thái gửi lệnh.
+  * **Modal (Hộp thoại):** Sử dụng để hiển thị dữ liệu lớn trả về từ Server như danh sách tiến trình (dạng bảng), hình ảnh (Image Preview), hoặc Video player. Modal hỗ trợ tính năng tải xuống (Download) dữ liệu về máy Client.
+
+## 4.3. Backend
+
+Mặc dù chạy trên trình duyệt, phần logic JavaScript (`app.js`) đóng vai trò là Backend của phía Client, chịu trách nhiệm thiết lập đường truyền tin cậy tới Server C++.
+
+### 4.3.1. Cơ chế Socket & Giao thức Kết nối
+
+Client sử dụng **WebSocket API** (`window.WebSocket`) để thiết lập kết nối **TCP** bền vững (Persistent Connection) tới Server.
+
+  * **Khởi tạo:** `socket = new WebSocket("ws://IP:PORT")`.
+  * **IP & Port:** Client yêu cầu người dùng nhập chính xác địa chỉ IPv4 của máy Server và Port (mặc định 9001) để thực hiện bắt tay (Handshake).
+  * **State Machine:** Logic Client quản lý vòng đời kết nối qua các sự kiện chuẩn của giao thức mạng:
+      * `onopen`: Chuyển giao diện sang màn hình điều khiển, thông báo kết nối thành công.
+      * `onclose`: Tự động phát hiện khi Server ngắt kết nối (hoặc sập nguồn), đưa giao diện về màn hình đăng nhập.
+      * `onerror`: Bắt các lỗi mạng (như sai IP, Firewall chặn) và thông báo cho người dùng.
+
+### 4.3.2. Xử lý Giao thức Ứng dụng (Application Protocol)
+
+Tương tự như Server, Client giao tiếp hoàn toàn qua **JSON**.
+
+**Quy trình Gửi (Request):**
+Hàm `sendSocketMessage(command, payload)` sẽ đóng gói dữ liệu thành chuỗi JSON string trước khi đẩy vào đường truyền:
+
+```javascript
+// Ví dụ gửi lệnh chặn process
+socket.send(JSON.stringify({ 
+    command: "stop_process", 
+    payload: { id: "1234" } 
+}));
+```
+
+**Quy trình Nhận (Response Dispatcher):**
+Tại sự kiện `onmessage`, Client thực hiện phân tích cú pháp (Parsing):
+
+1.  **Parse JSON:** Chuyển chuỗi nhận được thành Object.
+2.  **Routing (Định tuyến):** Dựa vào trường `"command"` để gọi hàm xử lý giao diện tương ứng (Switch-case structure).
+      * *Ví dụ:* Nếu `command` là `"screen_capture"`, Client sẽ không hiển thị text mà dựng một `<img>` tag bên trong Modal.
+
+### 4.3.3. Tải tài nguyên (Hybrid Data Handling)
+
+Một điểm đặc biệt trong kiến trúc mạng của hệ thống này là sự kết hợp giữa **WebSocket** và **HTTP**:
+
+  * **Lệnh điều khiển:** Đi qua WebSocket.
+  * **Dữ liệu File (Ảnh/Video):** Server không gửi binary file qua WebSocket (để tránh nghẽn). Thay vào đó, Server gửi đường dẫn URL (ví dụ: `/captures/img.jpg`).
+  * **Client Logic:** Khi nhận được đường dẫn, Client tự động ghép với địa chỉ gốc (`http://IP:PORT/captures/...`) để tải ảnh về hiển thị hoặc cung cấp link Download. Đây là kỹ thuật giúp tối ưu hóa băng thông mạng.
+
+## 4.4. Triển khai
+Do kiến trúc Client thuần tĩnh (Static Web), việc triển khai cực kỳ đơn giản và linh hoạt:
+
+1.  **Môi trường:** Client có thể chạy trên bất kỳ trình duyệt hiện đại nào (Chrome, Edge, Firefox) mà không cần cài đặt Node.js hay Web Server phức tạp.
+2.  **Khởi chạy:** Người dùng chỉ cần mở file `index.html` trực tiếp (double-click).
+3.  **Kết nối thực tế:**
+      * Tại máy Server: Chạy file thực thi C++ (lắng nghe Port 9001).
+      * Tại máy Client: Mở `index.html`, nhập địa chỉ IP LAN của máy Server (ví dụ: `192.168.1.10`) và Port `9001`.
+      * Nhấn **Kết Nối** và bắt đầu điều khiển.
+
+-----
+
+# Phần 5: QUẢN LÝ LỖI & TỐI ƯU HÓA
+
+## 5.1. **Chiến lược:** 
 
 Hệ thống áp dụng mô hình phòng thủ nhiều lớp để xử lý lỗi, từ tầng kết nối mạng thấp nhất đến tầng xử lý dữ liệu ứng dụng.
 
-### 4.1.1. Tầng Mạng & Giao thức (Network Layer)
+### 5.1.1. Tầng Mạng & Giao thức (Network Layer)
 
 Chúng ta sử dụng triệt để `beast::error_code` thay vì ném ngoại lệ (exceptions) cho các lỗi mạng thông thường.
 
@@ -731,7 +842,7 @@ if (ec == websocket::error::closed || ec == net::error::eof) {
 }
 ```
 
-### 4.1.2. Tầng Ứng dụng & Dữ liệu (Application Layer)
+### 5.1.2. Tầng Ứng dụng & Dữ liệu (Application Layer)
 
 Đây là nơi dễ gây crash nhất do dữ liệu bẩn từ Client. Ta xử lý như sau:
 
@@ -745,7 +856,7 @@ if (ec == websocket::error::closed || ec == net::error::eof) {
 
     * Sau khi parse, code kiểm tra kỹ: `!j.is_object()`, `!j.count("command")`. Điều này ngăn chặn việc truy cập vào vùng nhớ không tồn tại.
 
-### 4.1.3. Xử lý lỗi File (File System)
+### 5.1.3. Xử lý lỗi File (File System)
 
 Module HTTP Server xử lý các kịch bản lỗi chuẩn mực:
 
@@ -755,21 +866,21 @@ Module HTTP Server xử lý các kịch bản lỗi chuẩn mực:
 
 * **400 Bad Request**: Khi định dạng file không nằm trong whitelist (.jpg, .mp4, .png).
 
-## 4.2. Các kỹ thuật tối ưu hóa
+## 5.2. Các kỹ thuật tối ưu hóa
 
-### 4.2.1. Truyền tải File hiệu năng cao
+### 5.2.1. Truyền tải File hiệu năng cao
 
 Đây là điểm tối ưu quan trọng nhất trong hàm `handle_http_file_request`.
 
 * Sử dụng `http::file_body` thay vì `http::string_body` để gửi file. `http::file_body` cho phép hệ điều hành gửi file trực tiếp từ đĩa cứng ra socket, làm tiêu tốn cực ít RAM của máy Server ngay cả khi stream một file dung lượng lớn.
 
-### 4.2.2. Cơ chế "Strand"
+### 5.2.2. Cơ chế "Strand"
 
 * **Vấn đề:** Trong môi trường đa luồng (Multi-threading), nếu hai luồng cùng ghi vào một socket socket cùng lúc, dữ liệu sẽ bị hỏng (Data corruption).
 
 * **Giải pháp:** Sử dụng `net::strand`. `strand` đảm bảo rằng các hàm callback (`on_read`, `on_write`) của một session sẽ luôn được thực thi lần lượt, không bao giờ chạy song song, nhưng vẫn không chặn các session khác. Loại bỏ hoàn toàn nhu cầu sử dụng `std::mutex` phức tạp để khóa socket, giảm thiểu overhead của việc context switch.
 
-### 4.2.3. Hàng đợi Gửi
+### 5.2.3. Hàng đợi Gửi
 
 Trong `WebsocketSession`, chúng ta cài đặt `std::vector<std::shared_ptr<...>> queue_`.
 
@@ -783,9 +894,9 @@ Trong `WebsocketSession`, chúng ta cài đặt `std::vector<std::shared_ptr<...
 
 * **Hiệu quả:** Đảm bảo luồng gửi dữ liệu luôn mượt mà, không bị mất gói tin và tuân thủ đúng chuẩn của thư viện.
 
-# PHẦN 5: HẠN CHẾ VÀ NÂNG CẤP
+# PHẦN 6: HẠN CHẾ VÀ NÂNG CẤP
 
-## 5.1. **Quản lý đa Client**
+## 6.1. **Quản lý đa Client**
 Hiện tại Server đang dùng chiến thuật "Single-Client" theo yêu cầu của đồ án, nhưng có thể mở rộng mô hình trong tương lai để kết nối nhiều Client trong cùng 1 thời điểm.
 
 * Chuyển `std::shared_ptr<WebsocketSession> active_ws_session_` sang `std::unordered_map<int, std::shared_ptr<WebsocketSession>> sessions_` để quản lý nhiều Client.
@@ -794,7 +905,7 @@ Hiện tại Server đang dùng chiến thuật "Single-Client" theo yêu cầu 
 
 * Sử dụng `std::mutex` để bảo vệ Map này khi thêm/xóa session.
 
-## 5.2 Bảo mật
+## 6.2 Bảo mật
 
 Hiện tại dữ liệu truyền đi dưới dạng **Clear Text**. Bất kỳ ai bắt gói tin (Sniffing) đều thấy nội dung chat hoặc password.
 
@@ -802,7 +913,7 @@ Hiện tại dữ liệu truyền đi dưới dạng **Clear Text**. Bất kỳ 
 
 * Thêm cơ chế xác thực (Authentication) qua `Token` hoặc `Password`
 
-## 5.3 Xử lý lỗi JSON
+## 6.3 Xử lý lỗi JSON
 
 Code hiện tại dùng try-catch cho JSON parsing, nhưng nếu Client gửi binary data thay vì text, server có thể tốn tài nguyên xử lý ngoại lệ.
 
