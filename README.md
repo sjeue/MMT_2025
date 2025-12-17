@@ -160,6 +160,36 @@ cmake --build build --config Release
 # 4. Chạy chương trình
 ./build/server.exe
 ```
+## ⚠️ Quan trọng: Copy thư viện DLL (Deployment)
+
+Vì chương trình sử dụng **thư viện liên kết động**, để file `server.exe` chạy được và **tránh lỗi**: `System Error: ...dll was not found` bạn cần **copy các file `.dll` từ MSYS2** vào **thư mục chứa file thực thi** (thư mục `build/`).
+
+### 🔧 Tự động copy DLL bằng Terminal (MSYS2)
+
+Chạy các lệnh sau trong **MSYS2 UCRT64 terminal**:
+
+```bash
+# Copy các DLL của OpenCV, Boost và trình biên dịch vào thư mục build
+cp /ucrt64/bin/libopencv_core*.dll build/
+cp /ucrt64/bin/libopencv_video*.dll build/
+cp /ucrt64/bin/libopencv_highgui*.dll build/
+cp /ucrt64/bin/libopencv_imgcodecs*.dll build/
+cp /ucrt64/bin/libopencv_imgproc*.dll build/
+
+cp /ucrt64/bin/libboost_system*.dll build/
+cp /ucrt64/bin/libboost_thread*.dll build/
+
+cp /ucrt64/bin/libstdc++-6.dll build/
+cp /ucrt64/bin/libgcc_s_seh-1.dll build/
+cp /ucrt64/bin/libwinpthread-1.dll build/
+
+# Kiểm tra các file DLL đã được copy hay chưa
+ls build/*.dll
+```
+
+
+
+
 ## 4. Kết nối & Chạy chương trình (Connection) 🚀
 
 Hệ thống hoạt động theo mô hình **Client - Server** qua giao thức TCP/IP.
