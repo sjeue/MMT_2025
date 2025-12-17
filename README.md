@@ -1,4 +1,5 @@
-# [GIÁM SÁT VÀ QUẢN LÍ MÁY TÍNH TỪ XA]
+# GIÁM SÁT VÀ QUẢN LÍ MÁY TÍNH TỪ XA
+Đồ án môn học Mạng máy tính - Lớp 24TNT1 - Nhóm 2.
 
 > **Mô tả:** 
 - Hệ thống cho phép quản trị viên giám sát và điều khiển máy tính từ xa thông qua mô hình Client - Server
