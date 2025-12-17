@@ -142,10 +142,10 @@ pacman -S mingw-w64-ucrt-x86_64-toolchain \
           mingw-w64-ucrt-x86_64-opencv \
           mingw-w64-ucrt-x86_64-boost \
           mingw-w64-ucrt-x86_64-nlohmann-json
+```
+Các bước biên dịch (Build Steps)
 
-### Các bước biên dịch (Build Steps)
-
-Mở terminal **MSYS2 UCRT64**, di chuyển đến thư mục dự án và chạy lần lượt các lệnh sau:
+Mở terminal MSYS2 UCRT64, di chuyển đến thư mục dự án và chạy lần lượt các lệnh sau:
 
 ```bash
 # 1. Clean build cũ (Xóa thư mục build để tránh lỗi cache)
