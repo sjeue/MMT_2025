@@ -48,7 +48,7 @@ string record(double sec_record) {
     // Lấy thông số của luồng video
     double fps = cap.get(CAP_PROP_FPS); 
     if (fps == 0) { 
-        fps = 30.0;
+        fps = 15.0;
     }
     int frame_width = static_cast<int>(cap.get(CAP_PROP_FRAME_WIDTH));
     int frame_height = static_cast<int>(cap.get(CAP_PROP_FRAME_HEIGHT));
