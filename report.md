@@ -918,5 +918,9 @@ Hiện tại dữ liệu truyền đi dưới dạng **Clear Text**. Bất kỳ 
 Code hiện tại dùng try-catch cho JSON parsing, nhưng nếu Client gửi binary data thay vì text, server có thể tốn tài nguyên xử lý ngoại lệ.
 
 
+# PHỤ LỤC
 
+**Video demo:** [*https://www.youtube.com/watch?v=zbfBtu9pyog*](https://www.youtube.com/watch?v=zbfBtu9pyog)
+
+**Source code:** [*https://github.com/sjeue/MMT_2025*](https://github.com/sjeue/MMT_2025)
 
