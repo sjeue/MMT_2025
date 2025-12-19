@@ -922,5 +922,5 @@ Code hiện tại dùng try-catch cho JSON parsing, nhưng nếu Client gửi bi
 
 **Video demo:** [*https://www.youtube.com/watch?v=zbfBtu9pyog*](https://www.youtube.com/watch?v=zbfBtu9pyog)
 
-**Source code:** [*https://github.com/sjeue/MMT_2025*](https://github.com/sjeue/MMT_2025)
+**Source code:** [*https://github.com/sjeue/MMT_2025*](https://github.com/sjeue/MMT_2025) (branch `main`)
 
