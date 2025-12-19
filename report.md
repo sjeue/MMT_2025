@@ -46,15 +46,15 @@ TP. Hồ Chí Minh, Tháng 12/2025
 - [**MỤC LỤC**](#mục-lục)
 - [PHẦN 1: KIẾN TRÚC HỆ THỐNG SERVER](#phần-1-kiến-trúc-hệ-thống-server)
   - [1.1. Mô hình Asynchronous Event-Loop](#11-mô-hình-asynchronous-event-loop)
-    - [1.2. Phân tích cơ chế hoạt động](#12-phân-tích-cơ-chế-hoạt-động)
-      - [1.2.1. Tổng quan Workflow của Server](#121-tổng-quan-workflow-của-server)
-      - [1.2.2. Quản lý vòng đời kết nối](#122-quản-lý-vòng-đời-kết-nối)
-      - [1.2.3. Phân Hệ WebSocket](#123-phân-hệ-websocket)
-      - [1.2.4. Handle HTTP Request](#124-handle-http-request)
-        - [a) Quy trình kiểm tra hợp lệ \& định tuyến](#a-quy-trình-kiểm-tra-hợp-lệ--định-tuyến)
-        - [b) Cơ chế xác định định dạng (MIME Type Detection)](#b-cơ-chế-xác-định-định-dạng-mime-type-detection)
-        - [c) Kiểm tra tồn tại \& xử lý lỗi 404 (Existence Check)](#c-kiểm-tra-tồn-tại--xử-lý-lỗi-404-existence-check)
-        - [d) Kỹ thuật "Zero-Copy Streaming"](#d-kỹ-thuật-zero-copy-streaming)
+  - [1.2. Phân tích cơ chế hoạt động](#12-phân-tích-cơ-chế-hoạt-động)
+    - [1.2.1. Tổng quan Workflow của Server](#121-tổng-quan-workflow-của-server)
+    - [1.2.2. Quản lý vòng đời kết nối](#122-quản-lý-vòng-đời-kết-nối)
+    - [1.2.3. Phân Hệ WebSocket](#123-phân-hệ-websocket)
+    - [1.2.4. Handle HTTP Request](#124-handle-http-request)
+      - [a) Quy trình kiểm tra hợp lệ \& định tuyến](#a-quy-trình-kiểm-tra-hợp-lệ--định-tuyến)
+      - [b) Cơ chế xác định định dạng (MIME Type Detection)](#b-cơ-chế-xác-định-định-dạng-mime-type-detection)
+      - [c) Kiểm tra tồn tại \& xử lý lỗi 404 (Existence Check)](#c-kiểm-tra-tồn-tại--xử-lý-lỗi-404-existence-check)
+      - [d) Kỹ thuật "Zero-Copy Streaming"](#d-kỹ-thuật-zero-copy-streaming)
 - [PHẦN 2: GIAO THỨC GIAO TIẾP (PROTOCOL)](#phần-2-giao-thức-giao-tiếp-protocol)
 - [PHẦN 3: PHÂN TÍCH CHI TIẾT MODULES CHỨC NĂNG](#phần-3-phân-tích-chi-tiết-modules-chức-năng)
   - [3.1. Module điều khiển nguồn (`control.cpp`)](#31-module-điều-khiển-nguồn-controlcpp)
@@ -88,16 +88,16 @@ TP. Hồ Chí Minh, Tháng 12/2025
 - [PHẦN 4: CLIENT: KIẾN TRÚC \& TRIỂN KHAI](#phần-4-client-kiến-trúc--triển-khai)
   - [4.1. Kiến trúc tổng quan](#41-kiến-trúc-tổng-quan)
   - [4.2. Frontend](#42-frontend)
-    - [a) View Quản lý Kết nối (Login View)](#a-view-quản-lý-kết-nối-login-view)
-    - [b) View Điều khiển (Control Panel)](#b-view-điều-khiển-control-panel)
-    - [c) Hệ thống Phản hồi (Feedback System)](#c-hệ-thống-phản-hồi-feedback-system)
+    - [4.2.1. View Quản lý Kết nối (Login View)](#421-view-quản-lý-kết-nối-login-view)
+    - [4.2.2. View Điều khiển (Control Panel)](#422-view-điều-khiển-control-panel)
+    - [4.2.3. Hệ thống Phản hồi (Feedback System)](#423-hệ-thống-phản-hồi-feedback-system)
   - [4.3. Backend](#43-backend)
     - [4.3.1. Cơ chế Socket \& Giao thức Kết nối](#431-cơ-chế-socket--giao-thức-kết-nối)
     - [4.3.2. Xử lý Giao thức Ứng dụng (Application Protocol)](#432-xử-lý-giao-thức-ứng-dụng-application-protocol)
     - [4.3.3. Tải tài nguyên (Hybrid Data Handling)](#433-tải-tài-nguyên-hybrid-data-handling)
   - [4.4. Triển khai](#44-triển-khai)
 - [Phần 5: QUẢN LÝ LỖI \& TỐI ƯU HÓA](#phần-5-quản-lý-lỗi--tối-ưu-hóa)
-  - [5.1. **Chiến lược:**](#51-chiến-lược)
+  - [5.1. Chiến lược:](#51-chiến-lược)
     - [5.1.1. Tầng Mạng \& Giao thức (Network Layer)](#511-tầng-mạng--giao-thức-network-layer)
     - [5.1.2. Tầng Ứng dụng \& Dữ liệu (Application Layer)](#512-tầng-ứng-dụng--dữ-liệu-application-layer)
     - [5.1.3. Xử lý lỗi File (File System)](#513-xử-lý-lỗi-file-file-system)
@@ -106,9 +106,10 @@ TP. Hồ Chí Minh, Tháng 12/2025
     - [5.2.2. Cơ chế "Strand"](#522-cơ-chế-strand)
     - [5.2.3. Hàng đợi Gửi](#523-hàng-đợi-gửi)
 - [PHẦN 6: HẠN CHẾ VÀ NÂNG CẤP](#phần-6-hạn-chế-và-nâng-cấp)
-  - [6.1. **Quản lý đa Client**](#61-quản-lý-đa-client)
-  - [6.2 Bảo mật](#62-bảo-mật)
-  - [6.3 Xử lý lỗi JSON](#63-xử-lý-lỗi-json)
+  - [6.1. Quản lý đa Client](#61-quản-lý-đa-client)
+  - [6.2. Bảo mật](#62-bảo-mật)
+  - [6.3. Xử lý lỗi JSON](#63-xử-lý-lỗi-json)
+- [PHỤ LỤC](#phụ-lục)
 
 <div style="page-break-after: always;"></div>
 
@@ -119,9 +120,9 @@ TP. Hồ Chí Minh, Tháng 12/2025
 Hệ thống Server được xây dựng theo mô hình **Asynchronous I/O (Bất đồng bộ)** sử dụng thư viện `Boost.Asio`, cho phép xử lý đồng thời nhiều kết nối mạng mà không bị tắc nghẽn (non-blocking). Điểm đặc biệt của Server này là khả năng **Hybrid Protocol Handling**: nó có thể xử lý cả giao thức **HTTP** (để tải file) và **WebSocket** (để điều khiển thời gian thực) trên cùng một cổng duy nhất (Port `9001`).
 
 Server hoạt động đa luồng (Multi-threading) dựa trên số lõi CPU của phần cứng, đảm bảo hiệu năng cao khi chịu tải.
-### 1.2. Phân tích cơ chế hoạt động
+## 1.2. Phân tích cơ chế hoạt động
 
-#### 1.2.1. Tổng quan Workflow của Server
+### 1.2.1. Tổng quan Workflow của Server
 Để hình dung trực quan, hãy xem xét quy trình xử lý từ lúc Server khởi động đến khi tiếp nhận yêu cầu:
 
 **Giai đoạn 1: Khởi động (Initialization)**
@@ -162,7 +163,7 @@ Khi có một Client kết nối đến:
 
     * Kết nối được duy trì liên tục cho đến khi một bên chủ động ngắt hoặc timeout.
 
-#### 1.2.2. Quản lý vòng đời kết nối
+### 1.2.2. Quản lý vòng đời kết nối
 Class `Listener` đóng vai trò là "người gác cổng". Đây là điểm tiếp nhận đầu tiên của mọi kết nối mạng. Nhiệm vụ của nó không chỉ là chấp nhận kết nối mà còn phải phân loại giao thức. Quy trình tiếp nhận kết nối diễn ra như sau:
 
 1. **Khởi tạo Socket:** **Server** thiết lập kết nối với **Socket** qua 2 hàm sau trong class `Listener`.
@@ -189,7 +190,7 @@ Class `Listener` đóng vai trò là "người gác cổng". Đây là điểm t
         * **Trường hợp 2 (HTTP Request):** Nếu là yêu cầu HTTP thông thường (`GET` file ảnh, video...), nó gọi hàm `handle_http_file_request` để trả file và đóng kết nối ngay lập tức (Stateless).
 
 
-#### 1.2.3. Phân Hệ WebSocket
+### 1.2.3. Phân Hệ WebSocket
 Đây là "trái tim" của hệ thống, nơi chịu trách nhiệm duy trì kết nối bền vững (persistent connection) để điều khiển và nhận lệnh từ Client.
 
 **Nhóm hàm khởi tạo kết nối, thiết lập môi trường và dọn dẹp:**
@@ -262,10 +263,10 @@ Class `Listener` đóng vai trò là "người gác cổng". Đây là điểm t
 
     * Cơ chế này tạo thành một dây chuyền liên tục cho đến khi hàng đợi rỗng.
 
-#### 1.2.4. Handle HTTP Request
+### 1.2.4. Handle HTTP Request
 Ở đây ta xử lý yêu cầu HTTP qua hàm `handle_http_file_request`. Hàm hoạt động như một Web Server tĩnh.
 
-##### a) Quy trình kiểm tra hợp lệ & định tuyến
+#### a) Quy trình kiểm tra hợp lệ & định tuyến
 Đảm bảo Server chỉ trả lời những yêu cầu hợp lệ.
 ```c++
 std::string target_str = std::string(req.target()); 
@@ -282,7 +283,7 @@ if (req.method() == http::verb::get && starts_with_captures) {
 
 * **Xử lý Đường dẫn:** `target_str.substr(1)` biến đường dẫn URL (ví dụ: `/captures/img.jpg`) thành đường dẫn tệp tương đối (relative file path: `captures/img.jpg`) để hệ điều hành có thể hiểu và mở được.
 
-##### b) Cơ chế xác định định dạng (MIME Type Detection)
+#### b) Cơ chế xác định định dạng (MIME Type Detection)
 Trình duyệt cần biết file gửi về là ảnh hay video để chọn cách hiển thị phù hợp.
 ```c++
 if (string_ends_with(file_path_relative, ".jpg") || ...) {
@@ -295,7 +296,7 @@ if (string_ends_with(file_path_relative, ".jpg") || ...) {
 
 * **Xử lý lỗi định dạng:** Nếu đuôi file không nằm trong danh sách hỗ trợ, server trả về lỗi `400 Bad Request`. Đây là tính năng bảo mật gián tiếp, ngăn người dùng tải về các file nhạy cảm như `.exe`, `.dll`, hay source code `.cpp` dù chúng có nằm trong thư mục `/captures/`.
 
-##### c) Kiểm tra tồn tại & xử lý lỗi 404 (Existence Check)
+#### c) Kiểm tra tồn tại & xử lý lỗi 404 (Existence Check)
 ```c++
 std::ifstream file_check(file_path_relative, std::ios::binary | std::ios::ate);
 if (!file_check.is_open()) {
@@ -308,7 +309,7 @@ file_check.close();
 
 * **Lưu ý hiệu năng:** Việc mở file chỉ để kiểm tra rồi đóng lại (`file_check.close()`) ngay lập tức tốn một lượng nhỏ tài nguyên I/O đĩa. Tuy nhiên với quy mô ứng dụng nhỏ, sự an toàn và rõ ràng được ưu tiên hơn.
 
-##### d) Kỹ thuật "Zero-Copy Streaming"
+#### d) Kỹ thuật "Zero-Copy Streaming"
 ```c++
 // 1. Tạo response với body là file
 http::response<http::file_body> res{http::status::ok, req.version()};
@@ -332,6 +333,8 @@ http::write(socket, res, ec);
 
     * **Tốc độ:** Tận dụng tối đa băng thông ổ cứng và mạng.
 
+<div style="page-break-after: always;"></div>
+
 # PHẦN 2: GIAO THỨC GIAO TIẾP (PROTOCOL)
 Giao tiếp hoàn toàn dựa trên **JSON**. Cấu trúc giao tiếp được sử dụng là: 
 * `"command"`: phân loại request của lệnh gì
@@ -352,6 +355,8 @@ Giao tiếp hoàn toàn dựa trên **JSON**. Cấu trúc giao tiếp được s
 * `keylogger_start`, `keylogger_stop`: Ghi phím.
 * `webcam_capture`, `screen_capture`: Chụp ảnh.
 * `list_processes`, `stop_process`: Quản lý tác vụ.
+
+<div style="page-break-after: always;"></div>
 
 # PHẦN 3: PHÂN TÍCH CHI TIẾT MODULES CHỨC NĂNG
 
@@ -722,6 +727,8 @@ Module screenshot được xây dựng tối ưu cho môi trường Windows, k�
 * Hỗ trợ đa màn hình,
 * Dễ dàng tích hợp với kiến trúc WebSocket của Server.
 
+<div style="page-break-after: always;"></div>
+
 # PHẦN 4: CLIENT: KIẾN TRÚC & TRIỂN KHAI
 
 ## 4.1. Kiến trúc tổng quan 
@@ -742,13 +749,13 @@ Mô hình tương tác hoạt động theo cơ chế **Event-Driven**: Client lu
 
 Giao diện được thiết kế theo phong cách **Dashboard (Bảng điều khiển)** hiện đại, với chủ đề, tập trung vào trải nghiệm người dùng (UX) với các thành phần chính:
 
-### a) View Quản lý Kết nối (Login View)
+### 4.2.1. View Quản lý Kết nối (Login View)
 
   * Đây là màn hình đầu tiên khi khởi động ứng dụng.
   * Cung cấp các trường nhập liệu cho **IP Address** và **Port**. Điều này cho phép Client linh hoạt kết nối tới bất kỳ Server nào trong mạng LAN hoặc Internet mà không cần hard-code địa chỉ.
   * Hiển thị trạng thái kết nối trực quan thông qua các đèn tín hiệu (Status Light).
 
-### b) View Điều khiển (Control Panel)
+### 4.2.2. View Điều khiển (Control Panel)
 
 Được chia thành các thẻ (Card) chức năng riêng biệt, tương ứng với các module phía Server:
 
@@ -756,7 +763,7 @@ Giao diện được thiết kế theo phong cách **Dashboard (Bảng điều k
   * **Giám sát (Monitoring):** Các nút bấm lớn để kích hoạt chụp màn hình và Webcam.
   * **Keylogger & System:** Khu vực điều khiển ghi phím và các lệnh hệ thống (Shutdown/Restart).
 
-### c) Hệ thống Phản hồi (Feedback System)
+### 4.2.3. Hệ thống Phản hồi (Feedback System)
 
 Để đảm bảo người dùng biết lệnh đã được thực thi hay chưa, Frontend cài đặt hai cơ chế:
 
@@ -818,11 +825,11 @@ Do kiến trúc Client thuần tĩnh (Static Web), việc triển khai cực k�
       * Tại máy Client: Mở `index.html`, nhập địa chỉ IP LAN của máy Server (ví dụ: `192.168.1.10`) và Port `9001`.
       * Nhấn **Kết Nối** và bắt đầu điều khiển.
 
------
+<div style="page-break-after: always;"></div>
 
 # Phần 5: QUẢN LÝ LỖI & TỐI ƯU HÓA
 
-## 5.1. **Chiến lược:** 
+## 5.1. Chiến lược:
 
 Hệ thống áp dụng mô hình phòng thủ nhiều lớp để xử lý lỗi, từ tầng kết nối mạng thấp nhất đến tầng xử lý dữ liệu ứng dụng.
 
@@ -894,9 +901,11 @@ Trong `WebsocketSession`, chúng ta cài đặt `std::vector<std::shared_ptr<...
 
 * **Hiệu quả:** Đảm bảo luồng gửi dữ liệu luôn mượt mà, không bị mất gói tin và tuân thủ đúng chuẩn của thư viện.
 
+<div style="page-break-after: always;"></div>
+
 # PHẦN 6: HẠN CHẾ VÀ NÂNG CẤP
 
-## 6.1. **Quản lý đa Client**
+## 6.1. Quản lý đa Client
 Hiện tại Server đang dùng chiến thuật "Single-Client" theo yêu cầu của đồ án, nhưng có thể mở rộng mô hình trong tương lai để kết nối nhiều Client trong cùng 1 thời điểm.
 
 * Chuyển `std::shared_ptr<WebsocketSession> active_ws_session_` sang `std::unordered_map<int, std::shared_ptr<WebsocketSession>> sessions_` để quản lý nhiều Client.
@@ -905,7 +914,7 @@ Hiện tại Server đang dùng chiến thuật "Single-Client" theo yêu cầu 
 
 * Sử dụng `std::mutex` để bảo vệ Map này khi thêm/xóa session.
 
-## 6.2 Bảo mật
+## 6.2. Bảo mật
 
 Hiện tại dữ liệu truyền đi dưới dạng **Clear Text**. Bất kỳ ai bắt gói tin (Sniffing) đều thấy nội dung chat hoặc password.
 
@@ -913,10 +922,11 @@ Hiện tại dữ liệu truyền đi dưới dạng **Clear Text**. Bất kỳ 
 
 * Thêm cơ chế xác thực (Authentication) qua `Token` hoặc `Password`
 
-## 6.3 Xử lý lỗi JSON
+## 6.3. Xử lý lỗi JSON
 
 Code hiện tại dùng try-catch cho JSON parsing, nhưng nếu Client gửi binary data thay vì text, server có thể tốn tài nguyên xử lý ngoại lệ.
 
+<div style="page-break-after: always;"></div>
 
 # PHỤ LỤC
 
